@@ -1,0 +1,40 @@
+# Windows prerequisites for SchoolAdmin (Website, Backend, Mobile)
+
+# 1) Install Node.js (recommended LTS >= 18)
+Download and install from https://nodejs.org/ (choose Windows installer). This provides `node` and `npm`.
+
+# 2) Git
+Install Git for Windows: https://git-scm.com/download/win
+
+# 3) Backend (Node/Express)
+- No Python packages required. Use `npm install` in `Backend`.
+
+# 4) Website (Vite + React)
+- No Python packages required. Use `npm install` in `website`.
+
+# 5) Mobile (React Native)
+- Install Android Studio (with Android SDK and emulator). https://developer.android.com/studio
+- Install Java JDK 11+ and set `JAVA_HOME`.
+- Add `ANDROID_HOME` and platform-tools to `PATH` (e.g., %ANDROID_HOME%\platform-tools).
+
+# Useful Windows commands (PowerShell / CMD):
+# Install dependencies and run tests in each workspace folder:
+# Backend
+cd Backend
+npm install
+npm test
+
+# Website
+cd website
+npm install
+npm run dev
+npm test
+
+# Mobile (basic tests)
+cd mobileApp
+npm install
+npm test
+
+# Notes:
+- For React Native development on Windows follow the official guide: https://reactnative.dev/docs/environment-setup (select "React Native CLI Quickstart" and "Windows" tab).
+- Consider using `nvm-windows` to manage Node versions: https://github.com/coreybutler/nvm-windows

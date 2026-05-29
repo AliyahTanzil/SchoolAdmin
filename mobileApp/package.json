@@ -1,0 +1,22 @@
+{
+  "name": "schooladmin-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "App.js",
+  "scripts": {
+    "start": "node App.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-native": "^0.72.0"
+  },
+  "devDependencies": {
+    "jest": "^29.6.1",
+    "react-test-renderer": "^18.2.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

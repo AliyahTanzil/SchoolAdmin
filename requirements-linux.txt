@@ -1,0 +1,35 @@
+# Linux (Ubuntu/Debian) prerequisites for SchoolAdmin (Website, Backend, Mobile)
+
+# 1) System packages (example for Ubuntu/Debian):
+sudo apt update && sudo apt install -y build-essential curl git unzip openjdk-11-jdk python3 python3-pip
+
+# 2) Install Node.js (use nvm recommended):
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \ . "$NVM_DIR/nvm.sh"
+nvm install --lts
+
+# 3) Android / React Native (if developing mobile):
+- Install Android Studio (from https://developer.android.com/studio) and SDK command-line tools.
+- Set ANDROID_HOME and add platform-tools to PATH, e.g. export ANDROID_HOME="$HOME/Android/Sdk"
+
+# 4) Install project dependencies and run tests:
+# Backend
+cd Backend
+npm install
+npm test
+
+# Website
+cd website
+npm install
+npm run dev
+npm test
+
+# Mobile (basic tests)
+cd mobileApp
+npm install
+npm test
+
+# Notes:
+- On Linux you may need additional packages for native builds (lib32, libc6-dev) depending on Android/NDK versions.
+- Use `nvm` to avoid system Node conflicts.
