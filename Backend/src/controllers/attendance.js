@@ -1,18 +1,11 @@
-const attendance = new Map();
+const db = require('../db')
 
-function markPresent(studentId) {
-  if (!studentId) throw new Error('studentId required');
-  const today = new Date().toISOString().slice(0, 10);
-  const key = `${studentId}:${today}`;
-  attendance.set(key, true);
-  return { studentId, today, present: true };
+function markPresent(studentId, classId = null) {
+  return db.markPresent(studentId, classId)
 }
 
-function getAttendance(studentId) {
-  if (!studentId) throw new Error('studentId required');
-  const today = new Date().toISOString().slice(0, 10);
-  const key = `${studentId}:${today}`;
-  return { studentId, today, present: !!attendance.get(key) };
+function getAttendance(studentId, classId = null) {
+  return db.getAttendance(studentId, classId)
 }
 
-module.exports = { markPresent, getAttendance };
+module.exports = { markPresent, getAttendance }
