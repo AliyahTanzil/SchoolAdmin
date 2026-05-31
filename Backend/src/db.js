@@ -21,6 +21,15 @@ function init() {
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
+      email TEXT,
+      grade_level TEXT,
+      section TEXT,
+      gender TEXT,
+      dob TEXT,
+      address TEXT,
+      parent_name TEXT,
+      parent_phone TEXT,
+      status TEXT DEFAULT 'Active',
       meta TEXT
     );
   `)
@@ -40,6 +49,8 @@ function init() {
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
+      category TEXT,
+      section TEXT,
       teacher_id INTEGER,
       FOREIGN KEY (teacher_id) REFERENCES teachers (id)
     );
@@ -56,7 +67,7 @@ function init() {
     );
   `)
 
-  // attendance: student_id, class_id, day (YYYY-MM-DD), present INTEGER, marked_at TEXT, marked_by TEXT
+  // attendance
   db.exec(`
     CREATE TABLE IF NOT EXISTS attendance (
       student_id INTEGER NOT NULL,
@@ -81,28 +92,33 @@ function init() {
     );
   `)
 
-  // prepare statements after tables are created
-  stmtGetAllStudents = db.prepare('SELECT id, name, meta FROM students')
-  stmtGetStudent = db.prepare('SELECT id, name, meta FROM students WHERE id = ?')
-  stmtInsertStudent = db.prepare('INSERT INTO students (name, meta) VALUES (?, ?)')
-  stmtUpdateStudent = db.prepare('UPDATE students SET name = ?, meta = ? WHERE id = ?')
+  // prepare statements
+  stmtGetAllStudents = db.prepare('SELECT * FROM students')
+  stmtGetStudent = db.prepare('SELECT * FROM students WHERE id = ?')
+  stmtInsertStudent = db.prepare(`
+    INSERT INTO students (name, email, grade_level, section, gender, dob, address, parent_name, parent_phone, status, meta) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  stmtUpdateStudent = db.prepare(`
+    UPDATE students SET 
+      name = ?, email = ?, grade_level = ?, section = ?, gender = ?, 
+      dob = ?, address = ?, parent_name = ?, parent_phone = ?, status = ?, meta = ? 
+    WHERE id = ?
+  `)
   stmtDeleteStudent = db.prepare('DELETE FROM students WHERE id = ?')
 
-  // teachers
-  stmtGetAllTeachers = db.prepare('SELECT id, name, email, subject FROM teachers')
-  stmtGetTeacher = db.prepare('SELECT id, name, email, subject FROM teachers WHERE id = ?')
+  stmtGetAllTeachers = db.prepare('SELECT * FROM teachers')
+  stmtGetTeacher = db.prepare('SELECT * FROM teachers WHERE id = ?')
   stmtInsertTeacher = db.prepare('INSERT INTO teachers (name, email, subject) VALUES (?, ?, ?)')
   stmtUpdateTeacher = db.prepare('UPDATE teachers SET name = ?, email = ?, subject = ? WHERE id = ?')
   stmtDeleteTeacher = db.prepare('DELETE FROM teachers WHERE id = ?')
 
-  // classes
-  stmtGetAllClasses = db.prepare('SELECT id, name, teacher_id FROM classes')
-  stmtGetClass = db.prepare('SELECT id, name, teacher_id FROM classes WHERE id = ?')
-  stmtInsertClass = db.prepare('INSERT INTO classes (name, teacher_id) VALUES (?, ?)')
-  stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, teacher_id = ? WHERE id = ?')
+  stmtGetAllClasses = db.prepare('SELECT * FROM classes')
+  stmtGetClass = db.prepare('SELECT * FROM classes WHERE id = ?')
+  stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id) VALUES (?, ?, ?, ?)')
+  stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ? WHERE id = ?')
   stmtDeleteClass = db.prepare('DELETE FROM classes WHERE id = ?')
 
-  // enrollments
   stmtGetEnrollmentsByClass = db.prepare('SELECT student_id FROM enrollments WHERE class_id = ?')
   stmtGetEnrollmentsByStudent = db.prepare('SELECT class_id FROM enrollments WHERE student_id = ?')
   stmtInsertEnrollment = db.prepare('INSERT OR IGNORE INTO enrollments (student_id, class_id) VALUES (?, ?)')
@@ -111,40 +127,54 @@ function init() {
   stmtMarkPresent = db.prepare('INSERT OR REPLACE INTO attendance (student_id, class_id, day, present, marked_at, marked_by) VALUES (?, ?, ?, ?, ?, ?)')
   stmtGetAttendance = db.prepare('SELECT present, marked_by FROM attendance WHERE student_id = ? AND class_id IS ? AND day = ?')
 
-  // users
   stmtGetUserByUsername = db.prepare('SELECT id, username, password_hash, role FROM users WHERE username = ?')
   stmtGetUserById = db.prepare('SELECT id, username, role FROM users WHERE id = ?')
   stmtInsertUser = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)')
 }
 
-// initialize immediately so controllers can be used directly in tests
 try {
   init()
 } catch (e) {
-  // if init fails, let callers handle errors; log for debugging
   console.error('DB init error:', e)
 }
 
 // Students
 function getAllStudents() {
-  return stmtGetAllStudents.all().map(r => ({ id: r.id, name: r.name, meta: r.meta ? JSON.parse(r.meta) : {} }))
+  return stmtGetAllStudents.all().map(r => ({ ...r, meta: r.meta ? JSON.parse(r.meta) : {} }))
 }
 
 function getStudentById(id) {
   const r = stmtGetStudent.get(id)
   if (!r) return null
-  return { id: r.id, name: r.name, meta: r.meta ? JSON.parse(r.meta) : {} }
+  return { ...r, meta: r.meta ? JSON.parse(r.meta) : {} }
 }
 
 function createStudent(data) {
   const meta = data.meta ? JSON.stringify(data.meta) : null
-  const info = stmtInsertStudent.run(data.name, meta)
+  const info = stmtInsertStudent.run(
+    data.name, data.email || null, data.gradeLevel || null, data.section || null, 
+    data.gender || null, data.dob || null, data.address || null, 
+    data.parentName || null, data.parentPhone || null, data.status || 'Active', meta
+  )
   return getStudentById(info.lastInsertRowid)
 }
 
 function updateStudent(id, data) {
-  const meta = data.meta ? JSON.stringify(data.meta) : null
-  stmtUpdateStudent.run(data.name, meta, id)
+  const s = getStudentById(id)
+  if (!s) return null
+  const meta = data.meta ? JSON.stringify(data.meta) : JSON.stringify(s.meta)
+  stmtUpdateStudent.run(
+    data.name || s.name, data.email !== undefined ? data.email : s.email,
+    data.gradeLevel !== undefined ? data.gradeLevel : s.grade_level,
+    data.section !== undefined ? data.section : s.section,
+    data.gender !== undefined ? data.gender : s.gender,
+    data.dob !== undefined ? data.dob : s.dob,
+    data.address !== undefined ? data.address : s.address,
+    data.parentName !== undefined ? data.parentName : s.parent_name,
+    data.parentPhone !== undefined ? data.parentPhone : s.parent_phone,
+    data.status !== undefined ? data.status : s.status,
+    meta, id
+  )
   return getStudentById(id)
 }
 
@@ -193,14 +223,20 @@ function getClassById(id) {
 }
 
 function createClass(data) {
-  const info = stmtInsertClass.run(data.name, data.teacherId || null)
+  const info = stmtInsertClass.run(data.name, data.category || null, data.section || null, data.teacherId || null)
   return getClassById(info.lastInsertRowid)
 }
 
 function updateClass(id, data) {
   const c = getClassById(id)
   if (!c) return null
-  stmtUpdateClass.run(data.name || c.name, data.teacherId !== undefined ? data.teacherId : c.teacher_id, id)
+  stmtUpdateClass.run(
+    data.name || c.name, 
+    data.category !== undefined ? data.category : c.category,
+    data.section !== undefined ? data.section : c.section,
+    data.teacherId !== undefined ? data.teacherId : c.teacher_id, 
+    id
+  )
   return getClassById(id)
 }
 
