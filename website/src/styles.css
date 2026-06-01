@@ -45,6 +45,13 @@ body {
 
 .main-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-page, .sis-container, .attendance-container, .dashboard-container {
+  flex: 1;
+  width: 100%;
 }
 
 /* Navbar */

@@ -5,14 +5,20 @@ import Dashboard from './components/Dashboard'
 import Attendance from './components/Attendance'
 import StudentList from './components/Students/StudentList'
 import StudentForm from './components/Students/StudentForm'
+import TeacherList from './components/Teachers/TeacherList'
+import TeacherForm from './components/Teachers/TeacherForm'
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Landing')
   const [studentToEdit, setStudentToEdit] = useState(null)
+  const [teacherToEdit, setTeacherToEdit] = useState(null)
 
   const navigate = (screen, params = null) => {
     if (screen === 'StudentForm') {
       setStudentToEdit(params)
+    }
+    if (screen === 'TeacherForm') {
+      setTeacherToEdit(params)
     }
     setCurrentScreen(screen)
   }
@@ -29,6 +35,10 @@ export default function App() {
         return <StudentList onNavigate={navigate} onEdit={(s) => navigate('StudentForm', s)} />
       case 'StudentForm':
         return <StudentForm onNavigate={navigate} studentToEdit={studentToEdit} />
+      case 'TeacherList':
+        return <TeacherList onNavigate={navigate} onEdit={(t) => navigate('TeacherForm', t)} />
+      case 'TeacherForm':
+        return <TeacherForm onNavigate={navigate} teacherToEdit={teacherToEdit} />
       default:
         return <Landing onNavigate={navigate} />
     }

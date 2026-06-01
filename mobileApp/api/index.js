@@ -21,6 +21,12 @@ export const createStudent = (payload) => request('/students', { method: 'POST',
 export const updateStudent = (id, payload) => request(`/students/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
 export const deleteStudent = (id) => request(`/students/${id}`, { method: 'DELETE' })
 
+// Teachers
+export const listTeachers = () => request('/teachers')
+export const createTeacher = (payload) => request('/teachers', { method: 'POST', body: JSON.stringify(payload) })
+export const updateTeacher = (id, payload) => request(`/teachers/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+export const deleteTeacher = (id) => request(`/teachers/${id}`, { method: 'DELETE' })
+
 // Classes
 export const listClasses = () => request('/classes')
 export const listClassStudents = (id) => request(`/classes/${id}/students`)

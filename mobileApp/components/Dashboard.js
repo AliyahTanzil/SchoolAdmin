@@ -31,6 +31,9 @@ export default function Dashboard({ onNavigate }) {
         <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('StudentList')}>
           <Text style={styles.actionBtnText}>Manage Students</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('TeacherList')}>
+          <Text style={styles.actionBtnText}>Manage Teachers</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('Landing')}>
           <Text style={styles.actionBtnText}>Back to Home</Text>
         </TouchableOpacity>
@@ -41,7 +44,7 @@ export default function Dashboard({ onNavigate }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, paddingTop: 40, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   title: { fontSize: 24, fontWeight: '700', color: '#2d3748' },
   statsGrid: { flexDirection: 'row', padding: 15, flexWrap: 'wrap', justifyContent: 'space-between' },
   statCard: { backgroundColor: '#fff', width: '30%', padding: 15, borderRadius: 10, elevation: 2, alignItems: 'center' },

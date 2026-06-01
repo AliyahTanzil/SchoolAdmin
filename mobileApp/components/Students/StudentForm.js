@@ -71,7 +71,7 @@ export default function StudentForm({ onNavigate, studentToEdit }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, paddingTop: 40, backgroundColor: '#fff' },
+  header: { padding: 20, backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: '700' },
   form: { padding: 20 },
   field: { marginBottom: 20 },

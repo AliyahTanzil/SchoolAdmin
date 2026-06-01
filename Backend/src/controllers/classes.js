@@ -12,7 +12,12 @@ function getClass(id) {
 
 function createClass(data) {
   if (!data || !data.name) throw new Error('name required')
-  return db.createClass({ name: data.name, teacherId: data.teacherId })
+  return db.createClass({ 
+    name: data.name, 
+    category: data.category,
+    section: data.section,
+    teacherId: data.teacherId 
+  })
 }
 
 function updateClass(id, data) {
@@ -20,6 +25,8 @@ function updateClass(id, data) {
   if (!c) throw new Error('class not found')
   return db.updateClass(id, { 
     name: data.name || c.name, 
+    category: data.category !== undefined ? data.category : c.category,
+    section: data.section !== undefined ? data.section : c.section,
     teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id 
   })
 }

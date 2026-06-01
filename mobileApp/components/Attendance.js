@@ -124,19 +124,20 @@ export default function Attendance({ onNavigate }) {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListEmptyComponent={<Text style={styles.empty}>No students found.</Text>}
+          ListFooterComponent={
+            <TouchableOpacity style={styles.backBtn} onPress={() => onNavigate('Dashboard')}>
+              <Text style={styles.backBtnText}>Back to Dashboard</Text>
+            </TouchableOpacity>
+          }
         />
       )}
-
-      <TouchableOpacity style={styles.backBtn} onPress={() => onNavigate('Dashboard')}>
-        <Text style={styles.backBtnText}>Back to Dashboard</Text>
-      </TouchableOpacity>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, paddingTop: 40, backgroundColor: '#fff' },
+  header: { padding: 20, backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: '700' },
   filters: { padding: 15 },
   classSelector: { marginBottom: 15, flexDirection: 'row' },

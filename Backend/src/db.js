@@ -14,6 +14,9 @@ let stmtGetAllTeachers, stmtGetTeacher, stmtInsertTeacher, stmtUpdateTeacher, st
 let stmtGetAllClasses, stmtGetClass, stmtInsertClass, stmtUpdateClass, stmtDeleteClass
 let stmtGetEnrollmentsByClass, stmtGetEnrollmentsByStudent, stmtInsertEnrollment, stmtDeleteEnrollment
 let stmtMarkPresent, stmtGetAttendance
+let stmtGetAllPeriods, stmtGetPeriod, stmtInsertPeriod, stmtUpdatePeriod, stmtDeletePeriod
+let stmtGetAllSubjects, stmtGetSubject, stmtInsertSubject, stmtUpdateSubject, stmtDeleteSubject
+let stmtGetScheduleByClass, stmtInsertSchedule, stmtDeleteSchedule
 
 function init() {
   // students
@@ -40,6 +43,11 @@ function init() {
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT,
+      phone TEXT,
+      qualification TEXT,
+      joining_date TEXT,
+      status TEXT DEFAULT 'Active',
+      bio TEXT,
       subject TEXT
     );
   `)
@@ -53,6 +61,43 @@ function init() {
       section TEXT,
       teacher_id INTEGER,
       FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+    );
+  `)
+
+  // academic periods (Years/Terms)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS academic_periods (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
+      status TEXT DEFAULT 'Future'
+    );
+  `)
+
+  // subjects
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS subjects (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT UNIQUE,
+      category TEXT
+    );
+  `)
+
+  // schedules (Timetables)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schedules (
+      id INTEGER PRIMARY KEY,
+      class_id INTEGER NOT NULL,
+      teacher_id INTEGER,
+      subject_id INTEGER NOT NULL,
+      day_of_week TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      FOREIGN KEY (class_id) REFERENCES classes (id),
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+      FOREIGN KEY (subject_id) REFERENCES subjects (id)
     );
   `)
 
@@ -109,8 +154,16 @@ function init() {
 
   stmtGetAllTeachers = db.prepare('SELECT * FROM teachers')
   stmtGetTeacher = db.prepare('SELECT * FROM teachers WHERE id = ?')
-  stmtInsertTeacher = db.prepare('INSERT INTO teachers (name, email, subject) VALUES (?, ?, ?)')
-  stmtUpdateTeacher = db.prepare('UPDATE teachers SET name = ?, email = ?, subject = ? WHERE id = ?')
+  stmtInsertTeacher = db.prepare(`
+    INSERT INTO teachers (name, email, phone, qualification, joining_date, status, bio, subject) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  stmtUpdateTeacher = db.prepare(`
+    UPDATE teachers SET 
+      name = ?, email = ?, phone = ?, qualification = ?, 
+      joining_date = ?, status = ?, bio = ?, subject = ? 
+    WHERE id = ?
+  `)
   stmtDeleteTeacher = db.prepare('DELETE FROM teachers WHERE id = ?')
 
   stmtGetAllClasses = db.prepare('SELECT * FROM classes')
@@ -118,6 +171,23 @@ function init() {
   stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id) VALUES (?, ?, ?, ?)')
   stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ? WHERE id = ?')
   stmtDeleteClass = db.prepare('DELETE FROM classes WHERE id = ?')
+
+  // Planning
+  stmtGetAllPeriods = db.prepare('SELECT * FROM academic_periods')
+  stmtGetPeriod = db.prepare('SELECT * FROM academic_periods WHERE id = ?')
+  stmtInsertPeriod = db.prepare('INSERT INTO academic_periods (name, start_date, end_date, status) VALUES (?, ?, ?, ?)')
+  stmtUpdatePeriod = db.prepare('UPDATE academic_periods SET name = ?, start_date = ?, end_date = ?, status = ? WHERE id = ?')
+  stmtDeletePeriod = db.prepare('DELETE FROM academic_periods WHERE id = ?')
+
+  stmtGetAllSubjects = db.prepare('SELECT * FROM subjects')
+  stmtGetSubject = db.prepare('SELECT * FROM subjects WHERE id = ?')
+  stmtInsertSubject = db.prepare('INSERT INTO subjects (name, code, category) VALUES (?, ?, ?)')
+  stmtUpdateSubject = db.prepare('UPDATE subjects SET name = ?, code = ?, category = ? WHERE id = ?')
+  stmtDeleteSubject = db.prepare('DELETE FROM subjects WHERE id = ?')
+
+  stmtGetScheduleByClass = db.prepare('SELECT * FROM schedules WHERE class_id = ?')
+  stmtInsertSchedule = db.prepare('INSERT INTO schedules (class_id, teacher_id, subject_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?)')
+  stmtDeleteSchedule = db.prepare('DELETE FROM schedules WHERE id = ?')
 
   stmtGetEnrollmentsByClass = db.prepare('SELECT student_id FROM enrollments WHERE class_id = ?')
   stmtGetEnrollmentsByStudent = db.prepare('SELECT class_id FROM enrollments WHERE student_id = ?')
@@ -195,14 +265,28 @@ function getTeacherById(id) {
 }
 
 function createTeacher(data) {
-  const info = stmtInsertTeacher.run(data.name, data.email || null, data.subject || null)
+  const info = stmtInsertTeacher.run(
+    data.name, data.email || null, data.phone || null, 
+    data.qualification || null, data.joiningDate || null, 
+    data.status || 'Active', data.bio || null, data.subject || null
+  )
   return getTeacherById(info.lastInsertRowid)
 }
 
 function updateTeacher(id, data) {
   const t = getTeacherById(id)
   if (!t) return null
-  stmtUpdateTeacher.run(data.name || t.name, data.email || t.email, data.subject || t.subject, id)
+  stmtUpdateTeacher.run(
+    data.name || t.name, 
+    data.email !== undefined ? data.email : t.email,
+    data.phone !== undefined ? data.phone : t.phone,
+    data.qualification !== undefined ? data.qualification : t.qualification,
+    data.joiningDate !== undefined ? data.joiningDate : t.joining_date,
+    data.status !== undefined ? data.status : t.status,
+    data.bio !== undefined ? data.bio : t.bio,
+    data.subject !== undefined ? data.subject : t.subject,
+    id
+  )
   return getTeacherById(id)
 }
 
@@ -245,6 +329,57 @@ function deleteClass(id) {
   if (!c) return null
   stmtDeleteClass.run(id)
   return c
+}
+
+// Academic Periods
+function getAllPeriods() { return stmtGetAllPeriods.all() }
+function getPeriodById(id) { return stmtGetPeriod.get(id) || null }
+function createPeriod(data) {
+  const info = stmtInsertPeriod.run(data.name, data.startDate || null, data.endDate || null, data.status || 'Future')
+  return getPeriodById(info.lastInsertRowid)
+}
+function updatePeriod(id, data) {
+  const p = getPeriodById(id)
+  if (!p) return null
+  stmtUpdatePeriod.run(data.name || p.name, data.startDate || p.start_date, data.endDate || p.end_date, data.status || p.status, id)
+  return getPeriodById(id)
+}
+function deletePeriod(id) {
+  const p = getPeriodById(id)
+  if (!p) return null
+  stmtDeletePeriod.run(id)
+  return p
+}
+
+// Subjects
+function getAllSubjects() { return stmtGetAllSubjects.all() }
+function getSubjectById(id) { return stmtGetSubject.get(id) || null }
+function createSubject(data) {
+  const info = stmtInsertSubject.run(data.name, data.code || null, data.category || null)
+  return getSubjectById(info.lastInsertRowid)
+}
+function updateSubject(id, data) {
+  const s = getSubjectById(id)
+  if (!s) return null
+  stmtUpdateSubject.run(data.name || s.name, data.code || s.code, data.category || s.category, id)
+  return getSubjectById(id)
+}
+function deleteSubject(id) {
+  const s = getSubjectById(id)
+  if (!s) return null
+  stmtDeleteSubject.run(id)
+  return s
+}
+
+// Schedules
+function getScheduleForClass(classId) { return stmtGetScheduleByClass.all(classId) }
+function createSchedule(data) {
+  const info = stmtInsertSchedule.run(data.classId, data.teacherId || null, data.subjectId, data.dayOfWeek, data.startTime, data.endTime)
+  return { id: info.lastInsertRowid, ...data }
+}
+function deleteSchedule(id) {
+  stmtDeleteSchedule.run(id)
+  return { id }
 }
 
 // Enrollments
@@ -301,6 +436,9 @@ module.exports = {
   getAllStudents, getStudentById, createStudent, updateStudent, deleteStudent, 
   getAllTeachers, getTeacherById, createTeacher, updateTeacher, deleteTeacher,
   getAllClasses, getClassById, createClass, updateClass, deleteClass,
+  getAllPeriods, getPeriodById, createPeriod, updatePeriod, deletePeriod,
+  getAllSubjects, getSubjectById, createSubject, updateSubject, deleteSubject,
+  getScheduleForClass, createSchedule, deleteSchedule,
   enrollStudent, unenrollStudent, getStudentsInClass, getClassesForStudent,
   markPresent, getAttendance,
   getUserByUsername, getUserById, createUser

@@ -80,7 +80,7 @@ export default function Landing({ onNavigate }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  hero: { padding: 24, paddingTop: 60, backgroundColor: '#f8fafc', alignItems: 'center' },
+  hero: { padding: 24, backgroundColor: '#f8fafc', alignItems: 'center' },
   badge: { backgroundColor: '#dbeafe', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 20 },
   badgeText: { color: '#1e40af', fontSize: 12, fontWeight: '700' },
   heroTitle: { fontSize: 32, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 12, lineHeight: 40 },

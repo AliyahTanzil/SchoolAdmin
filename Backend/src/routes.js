@@ -3,6 +3,7 @@ const attendance = require('./controllers/attendance');
 const students = require('./controllers/students');
 const teachers = require('./controllers/teachers');
 const classes = require('./controllers/classes');
+const planning = require('./controllers/planning');
 const auth = require('./controllers/auth');
 
 // Auth Middleware
@@ -209,5 +210,22 @@ router.get('/classes/:id/students', (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
+
+// Academic Planning
+router.get('/planning/periods', authenticate, (req, res) => res.json(planning.listPeriods()))
+router.post('/planning/periods', authenticate, isAdmin, (req, res) => {
+  try { res.status(201).json(planning.createPeriod(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+router.get('/planning/subjects', authenticate, (req, res) => res.json(planning.listSubjects()))
+router.post('/planning/subjects', authenticate, isAdmin, (req, res) => {
+  try { res.status(201).json(planning.createSubject(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+router.get('/planning/schedules/:classId', authenticate, (req, res) => res.json(planning.getSchedule(req.params.classId)))
+router.post('/planning/schedules', authenticate, isAdmin, (req, res) => {
+  try { res.status(201).json(planning.addSchedule(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+})
+router.delete('/planning/schedules/:id', authenticate, isAdmin, (req, res) => res.json(planning.removeSchedule(req.params.id)))
 
 module.exports = router;
