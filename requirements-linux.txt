@@ -1,35 +1,37 @@
-# Linux (Ubuntu/Debian) prerequisites for SchoolAdmin (Website, Backend, Mobile)
+# Linux (Ubuntu/Debian) Requirements for SchoolAdmin
 
-# 1) System packages (example for Ubuntu/Debian):
-sudo apt update && sudo apt install -y build-essential curl git unzip openjdk-11-jdk python3 python3-pip
+## System Packages
+# Install via: sudo apt update && sudo apt install -y <package>
+git
+curl
+build-essential
+libsqlite3-dev
+openjdk-11-jdk
 
-# 2) Install Node.js (use nvm recommended):
-curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \ . "$NVM_DIR/nvm.sh"
-nvm install --lts
+## Node.js Environment
+# Recommended: Install NVM (Node Version Manager)
+# curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+nodejs >= 18.0.0
+npm >= 9.0.0
 
-# 3) Android / React Native (if developing mobile):
-- Install Android Studio (from https://developer.android.com/studio) and SDK command-line tools.
-- Set ANDROID_HOME and add platform-tools to PATH, e.g. export ANDROID_HOME="$HOME/Android/Sdk"
+## Backend Dependencies (npm)
+bcryptjs@^3.0.3
+better-sqlite3@^8.4.0
+express@^4.18.2
+jsonwebtoken@^9.0.3
 
-# 4) Install project dependencies and run tests:
-# Backend
-cd Backend
-npm install
-npm test
+## Website Dependencies (npm)
+react@^18.2.0
+react-dom@^18.2.0
+react-router-dom@^7.16.0
+vite@^4.4.9
+vitest@^0.34.1
 
-# Website
-cd website
-npm install
-npm run dev
-npm test
+## Mobile Dependencies (npm)
+react@^18.2.0
+react-native@^0.72.0
 
-# Mobile (basic tests)
-cd mobileApp
-npm install
-npm test
-
-# Notes:
-- On Linux you may need additional packages for native builds (lib32, libc6-dev) depending on Android/NDK versions.
-- Use `nvm` to avoid system Node conflicts.
+## Mobile Development (Android)
+# Requires Android Studio and SDK
+android-sdk-platform-tools
+android-sdk-build-tools
