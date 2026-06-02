@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native'
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, ScrollView } from 'react-native'
 import { listStudents, listClasses, listClassStudents, markPresent, getAttendance } from '../api'
 
 export default function Attendance({ onNavigate }) {
@@ -78,7 +78,7 @@ export default function Attendance({ onNavigate }) {
         onPress={() => handleMark(item.id)}
         disabled={item.present}
       >
-        <Text style={styles.attBtnText}>{item.present ? 'Present' : 'Mark'}</Text>
+        <Text style={[styles.attBtnText, item.present && styles.markedBtnText]}>{item.present ? 'Present' : 'Mark'}</Text>
       </TouchableOpacity>
     </View>
   )
@@ -136,27 +136,28 @@ export default function Attendance({ onNavigate }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: '700' },
-  filters: { padding: 15 },
-  classSelector: { marginBottom: 15, flexDirection: 'row' },
-  classBtn: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: '#edf2f7', marginRight: 10 },
-  activeClassBtn: { backgroundColor: '#2b6cb0' },
-  classBtnText: { color: '#4a5568', fontWeight: '600' },
+  container: { flex: 1, backgroundColor: '#f6f8fb' },
+  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#dde5ef' },
+  title: { fontSize: 24, fontWeight: '700', color: '#172033' },
+  filters: { padding: 16 },
+  classSelector: { marginBottom: 14, flexDirection: 'row' },
+  classBtn: { paddingHorizontal: 15, paddingVertical: 9, borderRadius: 18, backgroundColor: '#eef2f6', marginRight: 10, borderWidth: 1, borderColor: '#dde5ef' },
+  activeClassBtn: { backgroundColor: '#172033', borderColor: '#172033' },
+  classBtnText: { color: '#526174', fontWeight: '700' },
   activeClassBtnText: { color: '#fff' },
-  search: { backgroundColor: '#fff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  list: { padding: 15 },
-  card: { backgroundColor: '#fff', padding: 15, borderRadius: 8, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
-  presentCard: { borderLeftWidth: 4, borderLeftColor: '#38a169' },
+  search: { backgroundColor: '#fff', padding: 13, borderRadius: 8, borderWidth: 1, borderColor: '#cfd8e3', fontSize: 15 },
+  list: { padding: 16 },
+  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: '#dde5ef' },
+  presentCard: { borderLeftWidth: 4, borderLeftColor: '#0f9f6e' },
   info: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '600' },
-  details: { color: '#718096' },
-  attBtn: { backgroundColor: '#edf2f7', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
-  markedBtn: { backgroundColor: '#38a169' },
-  attBtnText: { fontWeight: '600' },
-  empty: { textAlign: 'center', marginTop: 50, color: '#718096' },
+  name: { fontSize: 17, fontWeight: '700', color: '#172033' },
+  details: { color: '#667085', marginTop: 2 },
+  attBtn: { backgroundColor: '#eef4ff', paddingHorizontal: 15, paddingVertical: 9, borderRadius: 6, borderWidth: 1, borderColor: '#bfd2f2' },
+  markedBtn: { backgroundColor: '#0f9f6e', borderColor: '#0f9f6e' },
+  attBtnText: { fontWeight: '700', color: '#172033' },
+  markedBtnText: { color: '#fff' },
+  empty: { textAlign: 'center', marginTop: 50, color: '#667085' },
   backBtn: { padding: 20, alignItems: 'center' },
-  backBtnText: { color: '#2b6cb0', fontWeight: '600' }
+  backBtnText: { color: '#1d4ed8', fontWeight: '700' }
 })
 

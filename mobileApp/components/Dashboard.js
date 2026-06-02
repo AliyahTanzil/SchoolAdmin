@@ -43,15 +43,15 @@ export default function Dashboard({ onNavigate }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  title: { fontSize: 24, fontWeight: '700', color: '#2d3748' },
-  statsGrid: { flexDirection: 'row', padding: 15, flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCard: { backgroundColor: '#fff', width: '30%', padding: 15, borderRadius: 10, elevation: 2, alignItems: 'center' },
-  statValue: { fontSize: 18, fontWeight: '700', color: '#2b6cb0' },
-  statLabel: { fontSize: 10, color: '#718096', textTransform: 'uppercase', marginTop: 5 },
+  container: { flex: 1, backgroundColor: '#f6f8fb' },
+  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#dde5ef' },
+  title: { fontSize: 24, fontWeight: '700', color: '#172033' },
+  statsGrid: { flexDirection: 'row', padding: 16, flexWrap: 'wrap', justifyContent: 'space-between' },
+  statCard: { backgroundColor: '#fff', width: '48%', minWidth: '48%', padding: 16, borderRadius: 8, elevation: 2, alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#dde5ef' },
+  statValue: { fontSize: 22, fontWeight: '800', color: '#172033' },
+  statLabel: { fontSize: 10, color: '#667085', textTransform: 'uppercase', marginTop: 6, fontWeight: '700' },
   section: { padding: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, color: '#2d3748' },
-  actionBtn: { backgroundColor: '#2b6cb0', padding: 15, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
-  actionBtnText: { color: '#fff', fontWeight: '600', fontSize: 16 }
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, color: '#172033' },
+  actionBtn: { backgroundColor: '#172033', padding: 15, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
+  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 }
 })

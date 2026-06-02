@@ -120,15 +120,15 @@ export default function TeacherForm({ onNavigate, teacherToEdit }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: '700', color: '#1e293b' },
+  container: { flex: 1, backgroundColor: '#f6f8fb' },
+  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#dde5ef' },
+  title: { fontSize: 24, fontWeight: '700', color: '#172033' },
   form: { padding: 20 },
   field: { marginBottom: 20 },
-  label: { fontSize: 16, fontWeight: '600', marginBottom: 8, color: '#334155' },
-  input: { backgroundColor: '#fff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', fontSize: 16 },
-  submitBtn: { backgroundColor: '#1e293b', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10, elevation: 2 },
+  label: { fontSize: 15, fontWeight: '700', marginBottom: 8, color: '#344054' },
+  input: { backgroundColor: '#fff', padding: 13, borderRadius: 8, borderWidth: 1, borderColor: '#cfd8e3', fontSize: 16 },
+  submitBtn: { backgroundColor: '#172033', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10, elevation: 2 },
   submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   cancelBtn: { padding: 15, alignItems: 'center' },
-  cancelBtnText: { color: '#64748b', fontSize: 16 }
+  cancelBtnText: { color: '#667085', fontSize: 16, fontWeight: '600' }
 })

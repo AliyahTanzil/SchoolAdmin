@@ -46,12 +46,12 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f6f8fb" />
       {renderScreen()}
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7fafc' }
+  container: { flex: 1, backgroundColor: '#f6f8fb' }
 })

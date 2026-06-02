@@ -79,22 +79,22 @@ export default function TeacherList({ onNavigate, onEdit }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#f6f8fb' },
+  header: { padding: 20, backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#dde5ef' },
   title: { fontSize: 24, fontWeight: '700', color: '#1e293b' },
-  addBtn: { backgroundColor: '#059669', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
-  addBtnText: { color: '#fff', fontWeight: '600' },
-  list: { padding: 15 },
-  card: { backgroundColor: '#fff', padding: 15, borderRadius: 8, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
+  addBtn: { backgroundColor: '#0f9f6e', paddingHorizontal: 15, paddingVertical: 9, borderRadius: 6 },
+  addBtnText: { color: '#fff', fontWeight: '700' },
+  list: { padding: 16 },
+  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: '#dde5ef' },
   info: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '600', color: '#1e293b' },
+  name: { fontSize: 17, fontWeight: '700', color: '#172033' },
   details: { color: '#64748b', fontSize: 14, marginTop: 2 },
-  subject: { color: '#2563eb', fontSize: 13, fontWeight: '700', marginTop: 4 },
+  subject: { color: '#1d4ed8', fontSize: 13, fontWeight: '700', marginTop: 4 },
   actions: { flexDirection: 'row', gap: 10 },
-  editBtn: { backgroundColor: '#1e293b', padding: 8, borderRadius: 4 },
-  deleteBtn: { backgroundColor: '#dc2626', padding: 8, borderRadius: 4 },
+  editBtn: { backgroundColor: '#172033', padding: 8, borderRadius: 6 },
+  deleteBtn: { backgroundColor: '#dc2626', padding: 8, borderRadius: 6 },
   btnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   empty: { textAlign: 'center', marginTop: 50, color: '#64748b' },
   backBtn: { padding: 20, alignItems: 'center' },
-  backBtnText: { color: '#1e293b', fontWeight: '600' }
+  backBtnText: { color: '#1d4ed8', fontWeight: '700' }
 })

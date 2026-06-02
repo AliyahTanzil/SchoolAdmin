@@ -52,7 +52,7 @@ export default function StudentForm({ student, onClose, onSuccess }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '800px' }}>
+      <div className="modal-content registration-modal student-registration-modal">
         <div className="module-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '25px' }}>
           <h3>{student ? 'Update Student Record' : 'Register New Student'}</h3>
         </div>
