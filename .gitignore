@@ -1,53 +1,19 @@
- # Node
+# Dependencies
 node_modules/
-**/node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-# Build outputs
-dist/
-build/
-.next/
-out/
-coverage/
+# Local Databases
+data/*.sqlite
+data/*.sqlite-journal
 
-# Env files
+# Environment secrets
 .env
-.env.*
-
-# Logs
 *.log
 
-# OS files
+# Build outputs
+coverage/
+website/dist/
+mobileApp/.expo/
+
+# OS metadata
 .DS_Store
 Thumbs.db
-
-# IDEs
-.vscode/
-.idea/
-
-# npm lockfiles (keep if you want deterministic installs, uncomment to ignore)
-# package-lock.json
-# yarn.lock
-
-# React Native / Android
-android/app/build/
-android/.gradle/
-android/.idea/
-android/local.properties
-*.keystore
-
-# iOS
-ios/Pods/
-ios/build/
-*.xcworkspace
-*.xcuserdata
-
-# Expo
-.expo/
-
-# Temporary
-tmp/
-temp/

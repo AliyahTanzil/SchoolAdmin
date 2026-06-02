@@ -15,8 +15,8 @@ flowchart LR
   Mobile[Mobile App]
   Browser -->|HTTP POST /api/attendance/:id/present| Backend(API)
   Mobile -->|HTTP POST /api/attendance/:id/present| Backend(API)
-  Backend(API) -->|in-memory map| AttendanceStore[(Map in memory)]
-  note right of AttendanceStore: current implementation stores
+  Backend(API) -->|SQL| AttendanceStore[(SQLite DB)]
+  note right of AttendanceStore: persistent storage stores
   note right of AttendanceStore: attendance per student per date
 ```
 
