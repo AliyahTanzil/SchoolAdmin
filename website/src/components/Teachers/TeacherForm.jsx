@@ -25,7 +25,7 @@ export default function TeacherForm({ teacher, onClose, onSuccess }) {
       }
       onSuccess()
     } catch (err) {
-      alert('Failed to save teacher record.')
+      alert(err.message || 'Failed to save teacher record.')
     } finally {
       setLoading(false)
     }

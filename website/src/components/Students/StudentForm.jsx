@@ -44,7 +44,7 @@ export default function StudentForm({ student, onClose, onSuccess }) {
       }
       onSuccess()
     } catch (err) {
-      alert('Failed to save student record.')
+      alert(err.message || 'Failed to save student record.')
     } finally {
       setLoading(false)
     }

@@ -17,6 +17,17 @@ let stmtMarkPresent, stmtGetAttendance
 let stmtGetAllPeriods, stmtGetPeriod, stmtInsertPeriod, stmtUpdatePeriod, stmtDeletePeriod
 let stmtGetAllSubjects, stmtGetSubject, stmtInsertSubject, stmtUpdateSubject, stmtDeleteSubject
 let stmtGetScheduleByClass, stmtInsertSchedule, stmtDeleteSchedule
+let stmtGetUserByUsername, stmtGetUserById, stmtInsertUser
+
+function ensureColumns(table, columns) {
+  const existing = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(column => column.name))
+
+  for (const column of columns) {
+    if (!existing.has(column.name)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`)
+    }
+  }
+}
 
 function init() {
   // students
@@ -136,6 +147,35 @@ function init() {
       role TEXT DEFAULT 'teacher'
     );
   `)
+
+  ensureColumns('students', [
+    { name: 'email', type: 'TEXT' },
+    { name: 'grade_level', type: 'TEXT' },
+    { name: 'section', type: 'TEXT' },
+    { name: 'gender', type: 'TEXT' },
+    { name: 'dob', type: 'TEXT' },
+    { name: 'address', type: 'TEXT' },
+    { name: 'parent_name', type: 'TEXT' },
+    { name: 'parent_phone', type: 'TEXT' },
+    { name: 'status', type: "TEXT DEFAULT 'Active'" },
+    { name: 'meta', type: 'TEXT' }
+  ])
+
+  ensureColumns('teachers', [
+    { name: 'email', type: 'TEXT' },
+    { name: 'phone', type: 'TEXT' },
+    { name: 'qualification', type: 'TEXT' },
+    { name: 'joining_date', type: 'TEXT' },
+    { name: 'status', type: "TEXT DEFAULT 'Active'" },
+    { name: 'bio', type: 'TEXT' },
+    { name: 'subject', type: 'TEXT' }
+  ])
+
+  ensureColumns('classes', [
+    { name: 'category', type: 'TEXT' },
+    { name: 'section', type: 'TEXT' },
+    { name: 'teacher_id', type: 'INTEGER' }
+  ])
 
   // prepare statements
   stmtGetAllStudents = db.prepare('SELECT * FROM students')
