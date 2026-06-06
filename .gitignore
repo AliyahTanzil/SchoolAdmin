@@ -1,19 +1,24 @@
-# Dependencies
 node_modules/
-
-# Local Databases
+dist/
+build/
+.expo/
+web-build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 data/*.sqlite
 data/*.sqlite-journal
-
-# Environment secrets
-.env
-*.log
-
-# Build outputs
-coverage/
-website/dist/
-mobileApp/.expo/
-
-# OS metadata
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .DS_Store
 Thumbs.db

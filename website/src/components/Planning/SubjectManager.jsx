@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import { listSubjects, createSubject } from '../../api/planning'
+import EmptyState from '../ui/EmptyState'
+import ErrorState from '../ui/ErrorState'
+import PageHeader from '../ui/PageHeader'
 
 export default function SubjectManager() {
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [newSub, setNewSub] = useState({ name: '', code: '', category: 'Core' })
 
   const fetchSubjects = async () => {
     try {
       setLoading(true)
+      setError('')
       const data = await listSubjects()
       setSubjects(data)
     } catch (e) {
       console.error(e)
+      setError('Subjects could not be loaded. Check the API connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -36,15 +42,15 @@ export default function SubjectManager() {
   return (
     <div className="sis-container">
       <div className="card-professional">
-        <div className="module-header">
-          <div>
-            <h2 style={{ color: 'var(--primary)', marginBottom: '4px' }}>Academic Subjects</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Centralized repository of school courses and subjects.</p>
-          </div>
-          <button className="btn-gradient" style={{ borderRadius: '4px' }} onClick={() => setShowAdd(true)}>
-            + Add Subject
-          </button>
-        </div>
+        <PageHeader
+          title="Academic Subjects"
+          subtitle="Centralized repository of school courses and subjects."
+          action={(
+            <button className="btn-gradient" onClick={() => setShowAdd(true)}>
+              + Add Subject
+            </button>
+          )}
+        />
 
         {showAdd && (
           <div className="form-grid" style={{ marginBottom: '32px', padding: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
@@ -72,6 +78,9 @@ export default function SubjectManager() {
           </div>
         )}
 
+        {error ? (
+          <ErrorState title="Unable to Load Subjects" message={error} />
+        ) : (
         <div className="table-responsive">
           <table className="table-professional">
             <thead>
@@ -85,7 +94,7 @@ export default function SubjectManager() {
             <tbody>
               {loading ? (
                 <tr><td colSpan="4" style={{ textAlign: 'center', padding: '40px' }}>Loading subjects...</td></tr>
-              ) : subjects.map(s => (
+              ) : subjects.length > 0 ? subjects.map(s => (
                 <tr key={s.id}>
                   <td><span style={{ fontWeight: '700', color: 'var(--accent)' }}>{s.code}</span></td>
                   <td style={{ fontWeight: '600' }}>{s.name}</td>
@@ -96,10 +105,20 @@ export default function SubjectManager() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="4">
+                    <EmptyState
+                      title="No subjects yet"
+                      message="Add your first academic subject to start building the timetable and curriculum."
+                    />
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   )

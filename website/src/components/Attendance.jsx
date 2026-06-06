@@ -1,7 +1,35 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { FixedSizeList } from 'react-window'
 import { markPresent, getAttendance } from '../api/attendance'
 import { listStudents } from '../api/students'
 import { listClasses, listClassStudents } from '../api/classes'
+
+const AttendanceRow = ({ index, style, data }) => {
+  const { filteredStudents, attendanceCache, updateCache } = data
+  const student = filteredStudents[index]
+  if (!student) return null
+  const status = attendanceCache[student.id]
+
+  return (
+    <div style={style} className="attendance-row-item">
+      <div className="col-name">{student.name}</div>
+      <div className="col-id">{student.id}</div>
+      <div className="col-status">
+        <div className="status-toggle-group">
+          {['P', 'A', 'L', 'E'].map(s => (
+            <button
+              key={s}
+              className={`status-btn ${status === s ? 'active-' + s : ''}`}
+              onClick={() => updateCache(student.id, s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Attendance() {
   const [classes, setClasses] = useState([])
@@ -10,16 +38,17 @@ export default function Attendance() {
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  // Local state cache to hold changes before submission
+  const [attendanceCache, setAttendanceCache] = useState({}) 
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     async function fetchInitialData() {
       try {
         const classesData = await listClasses()
         setClasses(classesData)
-        
-        // Load all students by default
         const studentsData = await listStudents()
-        setStudents(studentsData.map(s => ({ ...s, present: false })))
+        setStudents(Array.isArray(studentsData) ? studentsData : [])
       } catch (e) {
         console.error('Failed to load initial data', e)
       } finally {
@@ -31,25 +60,17 @@ export default function Attendance() {
 
   useEffect(() => {
     async function fetchStudentsByClass() {
-      if (!selectedClassId) {
-        const data = await listStudents()
-        setStudents(data.map(s => ({ ...s, present: false })))
-        return
-      }
-      
+      if (!selectedClassId) return
       try {
         setLoading(true)
         const data = await listClassStudents(selectedClassId)
-        // For each student, check their attendance for today in this class
-        const studentsWithAttendance = await Promise.all(data.map(async (student) => {
-          try {
-            const att = await getAttendance(student.id, selectedClassId)
-            return { ...student, present: att.present }
-          } catch (e) {
-            return { ...student, present: false }
-          }
+        const cache = {}
+        await Promise.all((Array.isArray(data) ? data : []).map(async (student) => {
+          const att = await getAttendance(student.id, selectedClassId)
+          cache[student.id] = att.present ? 'P' : 'A'
         }))
-        setStudents(studentsWithAttendance)
+        setStudents(Array.isArray(data) ? data : [])
+        setAttendanceCache(cache)
       } catch (e) {
         console.error('Failed to load class students', e)
       } finally {
@@ -59,73 +80,103 @@ export default function Attendance() {
     fetchStudentsByClass()
   }, [selectedClassId])
 
-  const handleMark = async (studentId) => {
+  const updateCache = (studentId, status) => {
+    setAttendanceCache(prev => ({ ...prev, [studentId]: status }))
+  }
+
+  const applyBulkStatus = (status) => {
+    const newCache = { ...attendanceCache }
+    filteredStudents.forEach(s => { newCache[s.id] = status })
+    setAttendanceCache(newCache)
+  }
+
+  const saveAttendance = async () => {
+    setIsSaving(true)
     try {
-      await markPresent(studentId, selectedClassId || null)
-      setStudents(students.map(s => s.id === studentId ? { ...s, present: true } : s))
-      setMsg(`Marked present: ${studentId}`)
+      // In a real scenario, this would be a bulk API call
+      await Promise.all(Object.entries(attendanceCache).map(([id, status]) => 
+        markPresent(id, selectedClassId, status)
+      ))
+      setMsg('Attendance saved successfully')
       setTimeout(() => setMsg(''), 3000)
     } catch (e) {
-      alert('Failed to mark attendance')
+      alert('Failed to save attendance')
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const filteredStudents = students.filter(s => 
+  const filteredStudents = useMemo(() => students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.id.toString().includes(searchTerm)
-  )
+  ), [students, searchTerm])
 
-  if (loading && students.length === 0) return <div className="loading">Loading...</div>
+  if (loading && students.length === 0) return <div className="loading">Loading Spreadsheet...</div>
 
   return (
-    <div className="attendance-container">
+    <div className="attendance-container spreadsheet-view">
       <div className="module-header">
-        <h2>Attendance Tracking</h2>
+        <h2>Class Attendance Sheet</h2>
         <div className="attendance-filters">
           <select 
             value={selectedClassId} 
             onChange={e => setSelectedClassId(e.target.value)}
             className="class-selector"
           >
-            <option value="">All Students</option>
+            <option value="">Select Class...</option>
             {classes.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          <div className="search-bar">
-            <input 
-              type="text" 
-              placeholder="Search student name or ID..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <input 
+            type="text" 
+            placeholder="Filter by name..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          <div className="bulk-actions-group">
+            <span className="bulk-label">Mark All:</span>
+            {['P', 'A', 'L', 'E'].map(status => (
+              <button 
+                key={status} 
+                onClick={() => applyBulkStatus(status)} 
+                className={`btn-bulk status-${status}`}
+              >
+                {status}
+              </button>
+            ))}
           </div>
+          <button onClick={saveAttendance} disabled={isSaving} className="btn-save">
+            {isSaving ? 'Saving...' : 'Submit Sheet'}
+          </button>
         </div>
       </div>
 
       {msg && <div className="alert alert-success">{msg}</div>}
 
-      <div className="attendance-grid">
-        {filteredStudents.length > 0 ? (
-          filteredStudents.map(student => (
-            <div key={student.id} className={`attendance-card ${student.present ? 'present' : ''}`}>
-              <div className="student-info">
-                <h4>{student.name}</h4>
-                <p>ID: {student.id} {student.grade ? `| Grade: ${student.grade}` : ''}</p>
-              </div>
-              <button 
-                className={`btn-attendance ${student.present ? 'marked' : ''}`}
-                onClick={() => handleMark(student.id)}
-                disabled={student.present}
-              >
-                {student.present ? 'Present' : 'Mark Present'}
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="no-results">No students found.</div>
-        )}
+      {filteredStudents.length === 0 && !loading ? (
+        <div className="empty-state-container card-professional">
+          <p>{selectedClassId ? 'No students enrolled in this class.' : 'Please select a class to view the attendance sheet.'}</p>
+        </div>
+      ) : (
+        <div className="virtualized-attendance-list" style={{ flex: 1, minHeight: '500px' }}>
+        <div className="attendance-header-row">
+          <div className="col-name">Student Name</div>
+          <div className="col-id">ID</div>
+          <div className="col-status">Status</div>
+        </div>
+        <FixedSizeList
+          height={500}
+          width="100%"
+          itemCount={filteredStudents.length || 0}
+          itemSize={50}
+          itemData={{ filteredStudents, attendanceCache, updateCache }}
+        >
+          {AttendanceRow}
+        </FixedSizeList>
       </div>
+      )}
     </div>
   )
 }

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { getSchedule, addSchedule, removeSchedule, listSubjects } from '../../api/planning'
 import { listClasses } from '../../api/classes'
 import { listTeachers } from '../../api/teachers'
+import EmptyState from '../ui/EmptyState'
+import ErrorState from '../ui/ErrorState'
+import PageHeader from '../ui/PageHeader'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']
@@ -12,13 +15,24 @@ export default function TimetableBuilder() {
   const [schedule, setSchedule] = useState([])
   const [subjects, setSubjects] = useState([])
   const [teachers, setTeachers] = useState([])
+  const [loadingMeta, setLoadingMeta] = useState(true)
+  const [error, setError] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [newSession, setNewSub] = useState({ subjectId: '', teacherId: '', dayOfWeek: 'Monday', startTime: '08:00', endTime: '09:00' })
 
   useEffect(() => {
     const fetchMeta = async () => {
-      const [c, s, t] = await Promise.all([listClasses(), listSubjects(), listTeachers()])
-      setClasses(c); setSubjects(s); setTeachers(t)
+      try {
+        setLoadingMeta(true)
+        setError('')
+        const [c, s, t] = await Promise.all([listClasses(), listSubjects(), listTeachers()])
+        setClasses(c); setSubjects(s); setTeachers(t)
+      } catch (e) {
+        console.error(e)
+        setError('Timetable setup data could not be loaded. Check classes, subjects, teachers, and API connectivity.')
+      } finally {
+        setLoadingMeta(false)
+      }
     }
     fetchMeta()
   }, [])
@@ -53,12 +67,11 @@ export default function TimetableBuilder() {
   return (
     <div className="sis-container">
       <div className="card-professional">
-        <div className="module-header">
-          <div>
-            <h2 style={{ color: 'var(--primary)', marginBottom: '4px' }}>Weekly Timetable Builder</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Coordinate subjects, teachers, and class schedules.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+        <PageHeader
+          title="Weekly Timetable Builder"
+          subtitle="Coordinate subjects, teachers, and class schedules."
+          action={(
+            <div style={{ display: 'flex', gap: '12px' }}>
             <select 
               className="class-selector" 
               value={selectedClassId} 
@@ -70,14 +83,14 @@ export default function TimetableBuilder() {
             </select>
             <button 
               className="btn-gradient" 
-              style={{ borderRadius: '4px' }} 
               disabled={!selectedClassId}
               onClick={() => setShowAdd(true)}
             >
               + Add Session
             </button>
           </div>
-        </div>
+          )}
+        />
 
         {showAdd && (
           <div className="form-grid" style={{ marginBottom: '32px', padding: '24px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
@@ -116,6 +129,14 @@ export default function TimetableBuilder() {
           </div>
         )}
 
+        {error ? (
+          <ErrorState title="Unable to Load Timetable" message={error} />
+        ) : !selectedClassId && !loadingMeta ? (
+          <EmptyState
+            title="Select a class to build a timetable"
+            message="Choose a class from the selector above to review or add weekly sessions."
+          />
+        ) : (
         <div className="table-responsive">
           <table className="table-professional" style={{ tableLayout: 'fixed' }}>
             <thead>
@@ -153,6 +174,7 @@ export default function TimetableBuilder() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   )

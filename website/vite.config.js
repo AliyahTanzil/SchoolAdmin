@@ -2,10 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  appType: 'spa',
   plugins: [
     react(),
-    VitePWA({
+    command === 'build' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
@@ -33,10 +34,10 @@ export default defineConfig({
         ]
       }
     })
-  ],
+  ].filter(Boolean),
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './tests/setup.js',
   },
-})
+}))

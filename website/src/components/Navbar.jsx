@@ -1,11 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
 
   const toggleMenu = () => setIsOpen(!isOpen)
+  const closeMenu = () => setIsOpen(false)
+  const handleLogout = () => {
+    logout()
+    closeMenu()
+    navigate('/')
+  }
 
   return (
     <nav className="navbar">
@@ -25,12 +33,28 @@ export default function Navbar() {
         </button>
 
         <div className={`nav-links ${isOpen ? 'active' : ''}`}>
-          <Link to="/" onClick={() => setIsOpen(false)}>Home</Link>
-          <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
-          <Link to="/students" onClick={() => setIsOpen(false)}>Students</Link>
-          <Link to="/teachers" onClick={() => setIsOpen(false)}>Teachers</Link>
-          <Link to="/attendance" onClick={() => setIsOpen(false)}>Attendance</Link>
-          <button className="btn-login">Login</button>
+          <Link to="/" onClick={closeMenu}>Home</Link>
+          <details className="nav-dropdown">
+            <summary>Dashboards</summary>
+            <div className="nav-dropdown-menu">
+              <Link to="/dashboard" onClick={closeMenu}>Role Center</Link>
+              {(!user || user.role === 'student' || user.role === 'admin') && <Link to="/dashboard/student" onClick={closeMenu}>Student Dashboard</Link>}
+              {(!user || user.role === 'teacher' || user.role === 'admin') && <Link to="/dashboard/teacher" onClick={closeMenu}>Teacher Dashboard</Link>}
+              {(!user || user.role === 'admin') && <Link to="/dashboard/admin" onClick={closeMenu}>Admin Dashboard</Link>}
+              {(!user || user.role === 'finance' || user.role === 'admin') && <Link to="/dashboard/finance" onClick={closeMenu}>Finance Dashboard</Link>}
+            </div>
+          </details>
+          <Link to="/students" onClick={closeMenu}>Students</Link>
+          <Link to="/teachers" onClick={closeMenu}>Teachers</Link>
+          <Link to="/attendance" onClick={closeMenu}>Attendance</Link>
+          {user ? (
+            <div className="nav-user">
+              <span>{user.username} · {user.role}</span>
+              <button className="btn-login" onClick={handleLogout}>Logout</button>
+            </div>
+          ) : (
+            <button className="btn-login" onClick={() => { closeMenu(); navigate('/login') }}>Login</button>
+          )}
         </div>
       </div>
     </nav>

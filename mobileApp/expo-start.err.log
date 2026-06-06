@@ -1,0 +1,4 @@
+Some dependencies are incompatible with the installed expo version:
+  react-native@0.72.17 - expected version: 0.72.10
+Your project may not work correctly until you install the correct versions of the packages.
+Fix with: npx expo install --fix

@@ -3,6 +3,7 @@
     "name": "SchoolAdmin",
     "slug": "schooladmin-mobile",
     "version": "0.1.0",
+    "sdkVersion": "49.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [

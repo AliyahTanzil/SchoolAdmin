@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from 'react-native'
 import { createStudent, updateStudent } from '../../api'
+import { colors, shadow } from '../../theme'
 
-export default function StudentForm({ onNavigate, studentToEdit }) {
+export default function StudentForm({ navigation, route }) {
+  const studentToEdit = route?.params?.studentToEdit
   const [name, setName] = useState(studentToEdit ? studentToEdit.name : '')
   const [grade, setGrade] = useState(studentToEdit ? studentToEdit.grade || '' : '')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
     if (!name) return alert('Name is required')
-    
+
     try {
       setLoading(true)
       const payload = { name, grade }
@@ -18,7 +20,7 @@ export default function StudentForm({ onNavigate, studentToEdit }) {
       } else {
         await createStudent(payload)
       }
-      onNavigate('StudentList')
+      navigation.navigate('StudentList')
     } catch (e) {
       alert('Failed to save student')
     } finally {
@@ -27,41 +29,28 @@ export default function StudentForm({ onNavigate, studentToEdit }) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.title}>{studentToEdit ? 'Edit Student' : 'Add New Student'}</Text>
+        <Text style={styles.subtitle}>Capture student details for enrollment and reporting.</Text>
       </View>
 
-      <View style={styles.form}>
+      <View style={styles.formCard}>
         <View style={styles.field}>
           <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter student name"
-          />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter student name" />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Grade / Class</Text>
-          <TextInput
-            style={styles.input}
-            value={grade}
-            onChangeText={setGrade}
-            placeholder="e.g. 10th Grade"
-          />
+          <TextInput style={styles.input} value={grade} onChangeText={setGrade} placeholder="e.g. 10th Grade" />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.submitBtn, loading && { opacity: 0.7 }]} 
-          onPress={handleSubmit}
-          disabled={loading}
-        >
+        <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.7 }]} onPress={handleSubmit} disabled={loading}>
           <Text style={styles.submitBtnText}>{loading ? 'Saving...' : 'Save Student'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.cancelBtn} onPress={() => onNavigate('StudentList')}>
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.navigate('StudentList')}>
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -70,15 +59,16 @@ export default function StudentForm({ onNavigate, studentToEdit }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f8fb' },
-  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#dde5ef' },
-  title: { fontSize: 24, fontWeight: '700', color: '#172033' },
-  form: { padding: 20 },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { padding: 24, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  title: { fontSize: 26, fontWeight: '800', color: colors.text, marginBottom: 8 },
+  subtitle: { color: colors.textLight, lineHeight: 22 },
+  formCard: { padding: 24, margin: 16, borderRadius: 24, backgroundColor: colors.surface, ...shadow, borderWidth: 1, borderColor: colors.border },
   field: { marginBottom: 20 },
-  label: { fontSize: 15, fontWeight: '700', marginBottom: 8, color: '#344054' },
-  input: { backgroundColor: '#fff', padding: 13, borderRadius: 8, borderWidth: 1, borderColor: '#cfd8e3', fontSize: 16 },
-  submitBtn: { backgroundColor: '#172033', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10, elevation: 2 },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  cancelBtn: { padding: 15, alignItems: 'center' },
-  cancelBtnText: { color: '#667085', fontSize: 16, fontWeight: '600' }
+  label: { fontSize: 15, fontWeight: '700', marginBottom: 10, color: colors.text },
+  input: { backgroundColor: colors.background, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border, fontSize: 16 },
+  submitBtn: { backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 10 },
+  submitBtnText: { color: colors.surface, fontWeight: '700', fontSize: 16 },
+  cancelBtn: { paddingVertical: 16, alignItems: 'center' },
+  cancelBtnText: { color: colors.textLight, fontSize: 16, fontWeight: '700' }
 })

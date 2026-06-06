@@ -2,6 +2,24 @@
 
 This document describes the current architecture, data model, API surface, component responsibilities, and recommended improvements for the SchoolAdmin monorepo.
 
+## Professional Rebuild and Design Direction
+
+The current app should now be treated as a working prototype and feature reference. Future design and rebuild work should use these two documents as the guiding source:
+
+- [PROFESSIONAL_REBUILD_BLUEPRINT.md](PROFESSIONAL_REBUILD_BLUEPRINT.md) — product scope, target architecture, modules, data model, phases, and implementation roadmap.
+- [PROFESSIONAL_DESIGN_SYSTEM.md](PROFESSIONAL_DESIGN_SYSTEM.md) — visual direction, tokens, screen patterns, component standards, web/mobile parity rules, and design QA checklist.
+
+The design direction is to move SchoolAdmin toward a quiet, professional, role-aware operations platform. Dashboards should be dense but readable, record screens should use structured tables or mobile cards, forms should be sectioned and validated, and every major workflow should include loading, empty, error, permission, and success states.
+
+Immediate design priorities:
+
+1. Centralize website and mobile design tokens.
+2. Standardize app shell/navigation across roles.
+3. Build shared web and mobile components for headers, stat cards, filter bars, tables/lists, forms, badges, empty states, and error states.
+4. Replace static dashboard values with live API metrics.
+5. Add login/session UI and role-based navigation.
+6. Keep SIS, TIS, AIS, academic planning, and finance visually connected but role-specific.
+
 ## Projects
 - Backend: [Backend/src/index.js](Backend/src/index.js#L1-L20) — Express API exposing attendance endpoints.
 - Website: [website/src](website/src) — Vite + React web UI that calls the backend.
