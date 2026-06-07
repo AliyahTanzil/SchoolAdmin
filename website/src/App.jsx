@@ -23,6 +23,7 @@ import StudentMasterLedger from './components/Admin/StudentMasterLedger'
 import AdmissionPortal from './components/Admin/AdmissionPortal'
 import MassPromotionMatrix from './components/Admin/MassPromotionMatrix'
 import SchoolConfig from './components/Admin/SchoolConfig'
+import ProtectedRoute from './components/ProtectedRoute'
 import './styles.css'
 
 export default function App() {
@@ -33,25 +34,25 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<AuthScreen />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/student" element={<StudentDashboard />} />
-          <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
-          <Route path="/dashboard/finance" element={<FinanceDashboard />} />
-          <Route path="/students" element={<StudentList />} />
-          <Route path="/teachers" element={<TeacherList />} />
-          <Route path="/planning/subjects" element={<SubjectManager />} />
-          <Route path="/planning/timetable" element={<TimetableBuilder />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/dashboard/admin/ledger" element={<StudentMasterLedger />} />
-          <Route path="/dashboard/admin/admissions" element={<AdmissionPortal />} />
-          <Route path="/dashboard/admin/promotions" element={<MassPromotionMatrix />} />
-          <Route path="/dashboard/admin/config" element={<SchoolConfig />} />
-          <Route path="/dashboard/teacher/gradebook" element={<Gradebook />} />
-          <Route path="/dashboard/teacher/remarks" element={<RemarksForm />} />
-          <Route path="/dashboard/student/progress" element={<StudentProgressDashboard />} />
-          <Route path="/dashboard/student/timetable" element={<StudentTimetableCalendar />} />
-          <Route path="/dashboard/student/documents" element={<StudentDocumentVault />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/student" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/finance" element={<ProtectedRoute><FinanceDashboard /></ProtectedRoute>} />
+          <Route path="/students" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
+          <Route path="/teachers" element={<ProtectedRoute><TeacherList /></ProtectedRoute>} />
+          <Route path="/planning/subjects" element={<ProtectedRoute><SubjectManager /></ProtectedRoute>} />
+          <Route path="/planning/timetable" element={<ProtectedRoute><TimetableBuilder /></ProtectedRoute>} />
+          <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/ledger" element={<ProtectedRoute><StudentMasterLedger /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/admissions" element={<ProtectedRoute><AdmissionPortal /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/promotions" element={<ProtectedRoute><MassPromotionMatrix /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/config" element={<ProtectedRoute><SchoolConfig /></ProtectedRoute>} />
+          <Route path="/dashboard/teacher/gradebook" element={<ProtectedRoute><Gradebook /></ProtectedRoute>} />
+          <Route path="/dashboard/teacher/remarks" element={<ProtectedRoute><RemarksForm /></ProtectedRoute>} />
+          <Route path="/dashboard/student/progress" element={<ProtectedRoute><StudentProgressDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/student/timetable" element={<ProtectedRoute><StudentTimetableCalendar /></ProtectedRoute>} />
+          <Route path="/dashboard/student/documents" element={<ProtectedRoute><StudentDocumentVault /></ProtectedRoute>} />
         </Routes>
       </main>
       <Footer />
