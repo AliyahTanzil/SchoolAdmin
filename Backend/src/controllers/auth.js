@@ -2,7 +2,11 @@ const db = require('../db')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+const ACTUAL_SECRET = JWT_SECRET || 'dev-secret-key';
 
 async function register(username, password, role = 'teacher') {
   const existing = db.getUserByUsername(username)
@@ -21,7 +25,7 @@ async function login(username, password) {
 
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },
-    JWT_SECRET,
+    ACTUAL_SECRET,
     { expiresIn: '24h' }
   )
 
@@ -33,7 +37,7 @@ async function login(username, password) {
 
 function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    return jwt.verify(token, ACTUAL_SECRET)
   } catch (e) {
     return null
   }

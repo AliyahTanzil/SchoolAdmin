@@ -22,6 +22,7 @@ import FinanceDashboard from './components/Dashboards/FinanceDashboard'
 import SubjectManager from './components/Planning/SubjectManager'
 import TimetableBuilder from './components/Planning/TimetableBuilder'
 import { getUser, logout } from './api'
+import { startSyncInterval } from './api/syncService'
 
 const Stack = createNativeStackNavigator()
 
@@ -37,6 +38,7 @@ export default function App() {
 
   useEffect(() => {
     getUser().then(setUser).catch(() => setUser(null))
+    startSyncInterval();
   }, [])
 
   const handleLogout = async () => {

@@ -1,5 +1,8 @@
+require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const routes = require('./routes');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 app.use((req, res, next) => {
@@ -12,16 +15,30 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use('/api', routes);
 
-// initialize database schema
-try {
-  require('./db').init()
-} catch (e) {
-  console.error('DB init error:', e)
+app.use(errorHandler);
+
+// initialize database
+async function start() {
+  try {
+    const knex = require('knex');
+    const config = require('../knexfile');
+    const dbMigrator = knex(config);
+    console.log('Running migrations...');
+    await dbMigrator.migrate.latest();
+    await dbMigrator.destroy();
+    
+    require('./db').init();
+    
+    const port = process.env.PORT || 3001;
+    app.listen(port, () => console.log(`Backend running on ${port}`));
+  } catch (e) {
+    console.error('Startup error:', e);
+    process.exit(1);
+  }
 }
 
 if (require.main === module) {
-  const port = process.env.PORT || 3001;
-  app.listen(port, () => console.log(`Backend running on ${port}`));
+  start();
 }
 
 module.exports = app;

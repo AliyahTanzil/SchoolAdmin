@@ -1,25 +1,26 @@
 const db = require('../db')
+const { snakeToCamel } = require('../utils/mapper')
 
 // Periods
-function listPeriods() { return db.getAllPeriods() }
+function listPeriods() { return snakeToCamel(db.getAllPeriods()) }
 function createPeriod(data) {
   if (!data.name) throw new Error('period name required')
-  return db.createPeriod(data)
+  return snakeToCamel(db.createPeriod(data))
 }
-function updatePeriod(id, data) { return db.updatePeriod(id, data) }
-function deletePeriod(id) { return db.deletePeriod(id) }
+function updatePeriod(id, data) { return snakeToCamel(db.updatePeriod(id, data)) }
+function deletePeriod(id) { return snakeToCamel(db.deletePeriod(id)) }
 
 // Subjects
-function listSubjects() { return db.getAllSubjects() }
+function listSubjects() { return snakeToCamel(db.getAllSubjects()) }
 function createSubject(data) {
   if (!data.name) throw new Error('subject name required')
-  return db.createSubject(data)
+  return snakeToCamel(db.createSubject(data))
 }
-function updateSubject(id, data) { return db.updateSubject(id, data) }
-function deleteSubject(id) { return db.deleteSubject(id) }
+function updateSubject(id, data) { return snakeToCamel(db.updateSubject(id, data)) }
+function deleteSubject(id) { return snakeToCamel(db.deleteSubject(id)) }
 
 // Schedules
-function getSchedule(classId) { return db.getScheduleForClass(classId) }
+function getSchedule(classId) { return snakeToCamel(db.getScheduleForClass(classId)) }
 function addSchedule(data) {
   // Simple conflict check: same class, same day, same time
   const current = db.getScheduleForClass(data.classId)
@@ -30,9 +31,9 @@ function addSchedule(data) {
   )
   if (conflict) throw new Error('Schedule conflict: class already has a session at this time')
   
-  return db.createSchedule(data)
+  return snakeToCamel(db.createSchedule(data))
 }
-function removeSchedule(id) { return db.deleteSchedule(id) }
+function removeSchedule(id) { return snakeToCamel(db.deleteSchedule(id)) }
 
 module.exports = { 
   listPeriods, createPeriod, updatePeriod, deletePeriod,

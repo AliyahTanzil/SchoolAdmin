@@ -1,8 +1,13 @@
 process.env.USE_SQLITE_IN_MEMORY = '1'
 const request = require('supertest')
 const app = require('../src/index')
+const { setupTestDB } = require('./helper')
 
 describe('Auth API', () => {
+  beforeAll(async () => {
+    await setupTestDB()
+  })
+
   const adminUser = { username: 'admin', password: 'password123', role: 'admin' }
   const teacherUser = { username: 'teacher', password: 'password123', role: 'teacher' }
 

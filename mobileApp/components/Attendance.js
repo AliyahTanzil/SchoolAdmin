@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, ScrollView } from 'react-native'
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, Alert } from 'react-native'
 import { listStudents, listClasses, listClassStudents, markPresent, getAttendance } from '../api'
 import { colors, shadow } from '../theme'
 import EmptyState from './ui/EmptyState'
@@ -44,14 +44,18 @@ export default function Attendance({ navigation }) {
         } else {
           data = await listStudents()
         }
+        
         const cache = {}
         await Promise.all(
           data.map(async (s) => {
             try {
               const att = await getAttendance(s.id, selectedClassId)
-              cache[s.id] = att.present ? 'P' : 'A'
+              cache[s.id] = {
+                status: att.present ? 'P' : 'A',
+                syncStatus: att.syncStatus || 'synced'
+              }
             } catch (e) {
-              cache[s.id] = 'A'
+              cache[s.id] = { status: 'A', syncStatus: 'synced' }
             }
           })
         )
@@ -68,24 +72,33 @@ export default function Attendance({ navigation }) {
   }, [selectedClassId])
 
   const updateCache = (id, status) => {
-    setAttendanceCache(prev => ({ ...prev, [id]: status }))
+    setAttendanceCache(prev => ({ ...prev, [id]: { ...prev[id], status } }))
   }
 
   const applyBulkStatus = (status) => {
     const newCache = { ...attendanceCache }
-    filtered.forEach(s => { newCache[s.id] = status })
+    filtered.forEach(s => { 
+      newCache[s.id] = { ...newCache[s.id], status } 
+    })
     setAttendanceCache(newCache)
   }
 
   const saveAttendance = async () => {
     try {
       setIsSaving(true)
-      await Promise.all(Object.entries(attendanceCache).map(([id, status]) => 
-        markPresent(id, selectedClassId, status === 'P')
-      ))
-      alert('Attendance saved successfully')
+      const results = await Promise.all(Object.entries(attendanceCache).map(async ([id, data]) => {
+        const res = await markPresent(id, selectedClassId, data.status === 'P')
+        return { id, res }
+      }))
+      
+      const newCache = { ...attendanceCache }
+      results.forEach(({ id, res }) => {
+        newCache[id] = { ...newCache[id], syncStatus: res.sync_status }
+      })
+      setAttendanceCache(newCache)
+      Alert.alert('Success', 'Attendance saved successfully')
     } catch (e) {
-      alert('Failed to save attendance')
+      Alert.alert('Error', 'Failed to save attendance')
     } finally {
       setIsSaving(false)
     }
@@ -95,28 +108,39 @@ export default function Attendance({ navigation }) {
     (s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.id.toString().includes(searchTerm)
   )
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.info}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.details}>ID: {item.id}</Text>
+  const renderItem = ({ item }) => {
+    const att = attendanceCache[item.id] || { status: 'A', syncStatus: 'synced' }
+    return (
+      <View style={[styles.card, att.status === 'P' && styles.presentCard]}>
+        <View style={styles.info}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.details}>ID: {item.id}</Text>
+          {att.syncStatus && (
+            <View style={styles.syncIndicator}>
+              <View style={[styles.syncDot, att.syncStatus === 'synced' ? styles.syncedDot : styles.pendingDot]} />
+              <Text style={styles.syncText}>
+                {att.syncStatus === 'synced' ? 'Synced' : 'Waiting to sync...'}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.statusGroup}>
+          {['P', 'A', 'L', 'E'].map(status => (
+            <TouchableOpacity
+              key={status}
+              style={[
+                styles.statusBtn,
+                att.status === status && { backgroundColor: getStatusColor(status), borderColor: getStatusColor(status) }
+              ]}
+              onPress={() => updateCache(item.id, status)}
+            >
+              <Text style={[styles.statusBtnText, att.status === status && { color: '#fff' }]}>{status}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-      <View style={styles.statusGroup}>
-        {['P', 'A', 'L', 'E'].map(status => (
-          <TouchableOpacity
-            key={status}
-            style={[
-              styles.statusBtn,
-              attendanceCache[item.id] === status && { backgroundColor: getStatusColor(status), borderColor: getStatusColor(status) }
-            ]}
-            onPress={() => updateCache(item.id, status)}
-          >
-            <Text style={[styles.statusBtnText, attendanceCache[item.id] === status && { color: '#fff' }]}>{status}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  )
+    )
+  }
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -206,7 +230,7 @@ const styles = StyleSheet.create({
   search: { backgroundColor: colors.surface, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.border, fontSize: 15, marginTop: 12 },
   list: { padding: 16 },
   card: { backgroundColor: colors.surface, padding: 18, borderRadius: 20, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', ...shadow, borderWidth: 1, borderColor: colors.border },
-  presentCard: { borderLeftWidth: 4, borderLeftColor: colors.accent },
+  presentCard: { borderLeftWidth: 4, borderLeftColor: colors.success },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 17, fontWeight: '800', color: colors.text },
   details: { color: colors.textLight, marginTop: 4 },
@@ -220,6 +244,11 @@ const styles = StyleSheet.create({
   saveBtn: { backgroundColor: colors.primary, padding: 16, borderRadius: 16, alignItems: 'center', marginBottom: 20 },
   saveBtnText: { color: colors.surface, fontWeight: '800', fontSize: 15 },
   stateWrap: { padding: 16 },
+  syncIndicator: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  syncDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  syncedDot: { backgroundColor: colors.success },
+  pendingDot: { backgroundColor: colors.warning },
+  syncText: { fontSize: 12, color: colors.textLight },
   backBtn: { padding: 20, alignItems: 'center' },
   backBtnText: { color: colors.primary, fontWeight: '700' }
 })

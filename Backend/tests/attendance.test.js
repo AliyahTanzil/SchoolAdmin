@@ -3,11 +3,13 @@ const request = require('supertest')
 const app = require('../src/index')
 const { markPresent, getAttendance } = require('../src/controllers/attendance');
 const { createStudent } = require('../src/controllers/students');
+const { setupTestDB } = require('./helper')
 
 describe('attendance controller', () => {
   let studentId;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    await setupTestDB()
     const s = createStudent({ name: 'Test Student' });
     studentId = s.id;
   });

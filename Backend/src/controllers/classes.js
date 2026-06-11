@@ -1,39 +1,52 @@
 const db = require('../db')
+const { snakeToCamel } = require('../utils/mapper')
 
 function listClasses() {
-  return db.getAllClasses()
+  return snakeToCamel(db.getAllClasses())
 }
 
 function getClass(id) {
   const c = db.getClassById(id)
-  if (!c) throw new Error('class not found')
-  return c
+  if (!c) {
+    const err = new Error('class not found');
+    err.status = 404;
+    throw err;
+  }
+  return snakeToCamel(c)
 }
 
 function createClass(data) {
   if (!data || !data.name) throw new Error('name required')
-  return db.createClass({ 
+  return snakeToCamel(db.createClass({ 
     name: data.name, 
     category: data.category,
     section: data.section,
     teacherId: data.teacherId 
-  })
+  }))
 }
 
 function updateClass(id, data) {
   const c = db.getClassById(id)
-  if (!c) throw new Error('class not found')
-  return db.updateClass(id, { 
+  if (!c) {
+    const err = new Error('class not found');
+    err.status = 404;
+    throw err;
+  }
+  return snakeToCamel(db.updateClass(id, { 
     name: data.name || c.name, 
     category: data.category !== undefined ? data.category : c.category,
     section: data.section !== undefined ? data.section : c.section,
     teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id 
-  })
+  }))
 }
 
 function deleteClass(id) {
   const c = db.getClassById(id)
-  if (!c) throw new Error('class not found')
+  if (!c) {
+    const err = new Error('class not found');
+    err.status = 404;
+    throw err;
+  }
   return db.deleteClass(id)
 }
 
@@ -46,7 +59,7 @@ function unenrollStudent(classId, studentId) {
 }
 
 function getStudents(classId) {
-  return db.getStudentsInClass(classId)
+  return snakeToCamel(db.getStudentsInClass(classId))
 }
 
 module.exports = { listClasses, getClass, createClass, updateClass, deleteClass, enrollStudent, unenrollStudent, getStudents }

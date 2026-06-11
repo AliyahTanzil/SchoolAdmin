@@ -1,14 +1,8 @@
 const path = require('path')
 const Database = require('better-sqlite3')
-
-const DB_FILE = process.env.USE_SQLITE_IN_MEMORY === '1' ? ':memory:' : (process.env.DB_FILE || path.join(__dirname, '../../data/db.sqlite'))
-
 const fs = require('fs')
-const dir = DB_FILE === ':memory:' ? null : path.dirname(DB_FILE)
-if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-const db = new Database(DB_FILE)
-
+let db;
 let stmtGetAllStudents, stmtGetStudent, stmtInsertStudent, stmtUpdateStudent, stmtDeleteStudent
 let stmtGetAllTeachers, stmtGetTeacher, stmtInsertTeacher, stmtUpdateTeacher, stmtDeleteTeacher
 let stmtGetAllClasses, stmtGetClass, stmtInsertClass, stmtUpdateClass, stmtDeleteClass
@@ -30,123 +24,12 @@ function ensureColumns(table, columns) {
 }
 
 function init() {
-  // students
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS students (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT,
-      grade_level TEXT,
-      section TEXT,
-      gender TEXT,
-      dob TEXT,
-      address TEXT,
-      parent_name TEXT,
-      parent_phone TEXT,
-      status TEXT DEFAULT 'Active',
-      meta TEXT
-    );
-  `)
+  const DB_FILE = process.env.USE_SQLITE_IN_MEMORY === '1' ? ':memory:' : (process.env.DB_FILE || path.join(__dirname, '../../data/db.sqlite'))
 
-  // teachers
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS teachers (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT,
-      phone TEXT,
-      qualification TEXT,
-      joining_date TEXT,
-      status TEXT DEFAULT 'Active',
-      bio TEXT,
-      subject TEXT
-    );
-  `)
+  const dir = DB_FILE === ':memory:' ? null : path.dirname(DB_FILE)
+  if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-  // classes
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS classes (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      category TEXT,
-      section TEXT,
-      teacher_id INTEGER,
-      FOREIGN KEY (teacher_id) REFERENCES teachers (id)
-    );
-  `)
-
-  // academic periods (Years/Terms)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS academic_periods (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      start_date TEXT,
-      end_date TEXT,
-      status TEXT DEFAULT 'Future'
-    );
-  `)
-
-  // subjects
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS subjects (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      code TEXT UNIQUE,
-      category TEXT
-    );
-  `)
-
-  // schedules (Timetables)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schedules (
-      id INTEGER PRIMARY KEY,
-      class_id INTEGER NOT NULL,
-      teacher_id INTEGER,
-      subject_id INTEGER NOT NULL,
-      day_of_week TEXT NOT NULL,
-      start_time TEXT NOT NULL,
-      end_time TEXT NOT NULL,
-      FOREIGN KEY (class_id) REFERENCES classes (id),
-      FOREIGN KEY (teacher_id) REFERENCES teachers (id),
-      FOREIGN KEY (subject_id) REFERENCES subjects (id)
-    );
-  `)
-
-  // enrollments
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS enrollments (
-      student_id INTEGER NOT NULL,
-      class_id INTEGER NOT NULL,
-      PRIMARY KEY (student_id, class_id),
-      FOREIGN KEY (student_id) REFERENCES students (id),
-      FOREIGN KEY (class_id) REFERENCES classes (id)
-    );
-  `)
-
-  // attendance
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS attendance (
-      student_id INTEGER NOT NULL,
-      class_id INTEGER,
-      day TEXT NOT NULL,
-      present INTEGER NOT NULL,
-      marked_at TEXT,
-      marked_by TEXT,
-      PRIMARY KEY (student_id, class_id, day),
-      FOREIGN KEY (student_id) REFERENCES students (id),
-      FOREIGN KEY (class_id) REFERENCES classes (id)
-    );
-  `)
-
-  // users
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'teacher'
-    );
-  `)
+  db = new Database(DB_FILE)
 
   ensureColumns('students', [
     { name: 'email', type: 'TEXT' },
@@ -240,12 +123,6 @@ function init() {
   stmtGetUserByUsername = db.prepare('SELECT id, username, password_hash, role FROM users WHERE username = ?')
   stmtGetUserById = db.prepare('SELECT id, username, role FROM users WHERE id = ?')
   stmtInsertUser = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)')
-}
-
-try {
-  init()
-} catch (e) {
-  console.error('DB init error:', e)
 }
 
 // Students

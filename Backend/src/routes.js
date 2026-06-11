@@ -5,6 +5,7 @@ const teachers = require('./controllers/teachers');
 const classes = require('./controllers/classes');
 const planning = require('./controllers/planning');
 const auth = require('./controllers/auth');
+const { validate } = require('./middleware/validate');
 
 // Auth Middleware
 const allowLocalAdmin = process.env.NODE_ENV !== 'test' && process.env.REQUIRE_AUTH !== '1'
@@ -30,86 +31,68 @@ const authenticate = (req, res, next) => {
 }
 
 const isAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Forbidden: Admins only' })
+  if (req.user?.role !== 'admin') {
+    const err = new Error('Forbidden: Admins only');
+    err.status = 403;
+    throw err;
+  }
   next()
 }
 
 // Auth endpoints
-router.post('/auth/register', async (req, res) => {
-  try {
-    const user = await auth.register(req.body.username, req.body.password, req.body.role)
-    res.status(201).json(user)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+router.post('/auth/register', validate({
+  username: { required: true, type: 'string', minLen: 3 },
+  password: { required: true, type: 'string', minLen: 6 }
+}), async (req, res) => {
+  const user = await auth.register(req.body.username, req.body.password, req.body.role)
+  res.status(201).json(user)
 })
 
-router.post('/auth/login', async (req, res) => {
-  try {
-    const result = await auth.login(req.body.username, req.body.password)
-    res.json(result)
-  } catch (e) {
-    res.status(401).json({ error: e.message })
-  }
+router.post('/auth/login', validate({
+  username: { required: true, type: 'string' },
+  password: { required: true, type: 'string' }
+}), async (req, res) => {
+  const result = await auth.login(req.body.username, req.body.password)
+  res.json(result)
 })
 
 // Attendance endpoints
-router.post('/attendance/:id/present', authenticate, async (req, res) => {
-  try {
-    const result = await attendance.markPresent(req.params.id, req.body.classId, req.user.username)
-    res.json(result)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+router.post('/attendance/:id/present', authenticate, validate({
+  classId: { required: false, type: 'number' }
+}), async (req, res) => {
+  const result = await attendance.markPresent(req.params.id, req.body.classId, req.user.username)
+  res.json(result)
 })
 
-router.get('/attendance/:id', async (req, res) => {
-  try {
-    const result = await attendance.getAttendance(req.params.id, req.query.classId, req.query.from, req.query.to)
-    res.json(result)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+router.get('/attendance/:id', authenticate, async (req, res) => {
+  const result = await attendance.getAttendance(req.params.id, req.query.classId, req.query.from, req.query.to)
+  res.json(result)
 })
 
 // Student CRUD
-router.get('/students', (req, res) => {
+router.get('/students', authenticate, (req, res) => {
   res.json(students.listStudents())
 })
 
-router.get('/students/:id', (req, res) => {
-  try {
-    res.json(students.getStudent(req.params.id))
-  } catch (e) {
-    res.status(404).json({ error: e.message })
-  }
+router.get('/students/:id', authenticate, (req, res) => {
+  res.json(students.getStudent(req.params.id))
 })
 
-router.post('/students', authenticate, isAdmin, (req, res) => {
-  try {
-    const s = students.createStudent(req.body)
-    res.status(201).json(s)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+router.post('/students', authenticate, isAdmin, validate({
+  name: { required: true, type: 'string', minLen: 2 }
+}), (req, res) => {
+  const s = students.createStudent(req.body)
+  res.status(201).json(s)
 })
 
 router.put('/students/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const s = students.updateStudent(req.params.id, req.body)
-    res.json(s)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const s = students.updateStudent(req.params.id, req.body)
+  res.json(s)
 })
 
 router.delete('/students/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const d = students.deleteStudent(req.params.id)
-    res.json(d)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const d = students.deleteStudent(req.params.id)
+  res.json(d)
 })
 
 // Teacher CRUD
@@ -118,38 +101,22 @@ router.get('/teachers', authenticate, (req, res) => {
 })
 
 router.get('/teachers/:id', authenticate, (req, res) => {
-  try {
-    res.json(teachers.getTeacher(req.params.id))
-  } catch (e) {
-    res.status(404).json({ error: e.message })
-  }
+  res.json(teachers.getTeacher(req.params.id))
 })
 
 router.post('/teachers', authenticate, isAdmin, (req, res) => {
-  try {
-    const t = teachers.createTeacher(req.body)
-    res.status(201).json(t)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const t = teachers.createTeacher(req.body)
+  res.status(201).json(t)
 })
 
 router.put('/teachers/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const t = teachers.updateTeacher(req.params.id, req.body)
-    res.json(t)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const t = teachers.updateTeacher(req.params.id, req.body)
+  res.json(t)
 })
 
 router.delete('/teachers/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const d = teachers.deleteTeacher(req.params.id)
-    res.json(d)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const d = teachers.deleteTeacher(req.params.id)
+  res.json(d)
 })
 
 // Class CRUD
@@ -158,81 +125,53 @@ router.get('/classes', authenticate, (req, res) => {
 })
 
 router.get('/classes/:id', authenticate, (req, res) => {
-  try {
-    res.json(classes.getClass(req.params.id))
-  } catch (e) {
-    res.status(404).json({ error: e.message })
-  }
+  res.json(classes.getClass(req.params.id))
 })
 
 router.post('/classes', authenticate, isAdmin, (req, res) => {
-  try {
-    const c = classes.createClass(req.body)
-    res.status(201).json(c)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const c = classes.createClass(req.body)
+  res.status(201).json(c)
 })
 
 router.put('/classes/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const c = classes.updateClass(req.params.id, req.body)
-    res.json(c)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const c = classes.updateClass(req.params.id, req.body)
+  res.json(c)
 })
 
 router.delete('/classes/:id', authenticate, isAdmin, (req, res) => {
-  try {
-    const d = classes.deleteClass(req.params.id)
-    res.json(d)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const d = classes.deleteClass(req.params.id)
+  res.json(d)
 })
 
 // Enrollments
 router.post('/classes/:id/enroll', authenticate, isAdmin, (req, res) => {
-  try {
-    const result = classes.enrollStudent(req.params.id, req.body.studentId)
-    res.json(result)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const result = classes.enrollStudent(req.params.id, req.body.studentId)
+  res.json(result)
 })
 
 router.delete('/classes/:id/enroll/:studentId', authenticate, isAdmin, (req, res) => {
-  try {
-    const result = classes.unenrollStudent(req.params.id, req.params.studentId)
-    res.json(result)
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+  const result = classes.unenrollStudent(req.params.id, req.params.studentId)
+  res.json(result)
 })
 
-router.get('/classes/:id/students', (req, res) => {
-  try {
-    res.json(classes.getStudents(req.params.id))
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
+router.get('/classes/:id/students', authenticate, (req, res) => {
+  res.json(classes.getStudents(req.params.id))
 })
 
 // Academic Planning
 router.get('/planning/periods', authenticate, (req, res) => res.json(planning.listPeriods()))
 router.post('/planning/periods', authenticate, isAdmin, (req, res) => {
-  try { res.status(201).json(planning.createPeriod(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+  res.status(201).json(planning.createPeriod(req.body))
 })
 
 router.get('/planning/subjects', authenticate, (req, res) => res.json(planning.listSubjects()))
 router.post('/planning/subjects', authenticate, isAdmin, (req, res) => {
-  try { res.status(201).json(planning.createSubject(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+  res.status(201).json(planning.createSubject(req.body))
 })
 
 router.get('/planning/schedules/:classId', authenticate, (req, res) => res.json(planning.getSchedule(req.params.classId)))
 router.post('/planning/schedules', authenticate, isAdmin, (req, res) => {
-  try { res.status(201).json(planning.addSchedule(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
+  res.status(201).json(planning.addSchedule(req.body))
 })
 router.delete('/planning/schedules/:id', authenticate, isAdmin, (req, res) => res.json(planning.removeSchedule(req.params.id)))
 

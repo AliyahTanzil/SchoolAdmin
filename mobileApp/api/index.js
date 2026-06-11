@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import NetInfo from "@react-native-community/netinfo"
+import { getDB } from './database'
 
 const API_BASE_URL = 'http://127.0.0.1:3001' // change for device/emulator as needed
 
@@ -32,6 +34,14 @@ function jsonOptions(payload, extraHeaders = {}) {
     headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(payload)
   }
+}
+
+async function addToSyncQueue(action, table_name, data, record_id = null) {
+  const db = await getDB();
+  await db.executeSql(
+    'INSERT INTO sync_queue (action, table_name, data, record_id) VALUES (?, ?, ?, ?)',
+    [action, table_name, JSON.stringify(data), record_id]
+  );
 }
 
 // Auth helpers
@@ -80,19 +90,70 @@ export async function getUser() {
 
 // Students
 export async function listStudents() {
-  return request('/api/students')
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    try {
+      const students = await request('/api/students')
+      const db = await getDB();
+      for (const s of students) {
+        await db.executeSql(
+          'INSERT OR REPLACE INTO students (id, name, email, grade_level, status, sync_status) VALUES (?, ?, ?, ?, ?, ?)',
+          [s.id, s.name, s.email, s.grade_level, s.status, 'synced']
+        );
+      }
+      return students;
+    } catch (e) {
+      console.log('Fetch students failed, using local', e);
+    }
+  }
+  const db = await getDB();
+  const [results] = await db.executeSql('SELECT * FROM students ORDER BY name ASC');
+  const students = [];
+  for (let i = 0; i < results.rows.length; i++) {
+    students.push(results.rows.item(i));
+  }
+  return students;
 }
 
 export async function createStudent(payload) {
-  return request('/api/students', { method: 'POST', ...jsonOptions(payload) })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    const s = await request('/api/students', { method: 'POST', ...jsonOptions(payload) })
+    const db = await getDB();
+    await db.executeSql(
+      'INSERT OR REPLACE INTO students (id, name, email, grade_level, status, sync_status) VALUES (?, ?, ?, ?, ?, ?)',
+      [s.id, s.name, s.email, s.grade_level, s.status, 'synced']
+    );
+    return s;
+  } else {
+    const db = await getDB();
+    const [info] = await db.executeSql(
+      'INSERT INTO students (name, email, grade_level, status, sync_status) VALUES (?, ?, ?, ?, ?)',
+      [payload.name, payload.email, payload.grade_level, 'Active', 'pending']
+    );
+    await addToSyncQueue('CREATE', 'students', payload, info.insertId);
+    return { id: info.insertId, ...payload, sync_status: 'pending' };
+  }
 }
 
 export async function updateStudent(id, payload) {
-  return request(`/api/students/${encodeURIComponent(id)}`, { method: 'PUT', ...jsonOptions(payload) })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    return request(`/api/students/${encodeURIComponent(id)}`, { method: 'PUT', ...jsonOptions(payload) })
+  } else {
+    await addToSyncQueue('UPDATE', 'students', { id, ...payload });
+    return { id, ...payload, sync_status: 'pending' };
+  }
 }
 
 export async function deleteStudent(id) {
-  return request(`/api/students/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    return request(`/api/students/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  } else {
+    await addToSyncQueue('DELETE', 'students', { id });
+    return { id, deleted: true, sync_status: 'pending' };
+  }
 }
 
 // Teachers
@@ -105,15 +166,33 @@ export async function getTeacher(id) {
 }
 
 export async function createTeacher(payload) {
-  return request('/api/teachers', { method: 'POST', ...jsonOptions(payload) })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    return request('/api/teachers', { method: 'POST', ...jsonOptions(payload) })
+  } else {
+    await addToSyncQueue('CREATE', 'teachers', payload);
+    return { ...payload, sync_status: 'pending' };
+  }
 }
 
 export async function updateTeacher(id, payload) {
-  return request(`/api/teachers/${encodeURIComponent(id)}`, { method: 'PUT', ...jsonOptions(payload) })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    return request(`/api/teachers/${encodeURIComponent(id)}`, { method: 'PUT', ...jsonOptions(payload) })
+  } else {
+    await addToSyncQueue('UPDATE', 'teachers', { id, ...payload });
+    return { id, ...payload, sync_status: 'pending' };
+  }
 }
 
 export async function deleteTeacher(id) {
-  return request(`/api/teachers/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    return request(`/api/teachers/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  } else {
+    await addToSyncQueue('DELETE', 'teachers', { id });
+    return { id, deleted: true, sync_status: 'pending' };
+  }
 }
 
 // Classes
@@ -150,16 +229,58 @@ export async function unenrollStudent(classId, studentId) {
 }
 
 // Attendance
-export async function markPresent(studentId, classId = null, markedBy = null) {
+export async function markPresent(studentId, classId = null, isPresent = true, markedBy = null) {
   if (!studentId) throw new Error('studentId required')
-  return request(`/api/attendance/${encodeURIComponent(studentId)}/present`, { method: 'POST', ...jsonOptions({ classId, markedBy }) })
+  
+  const db = await getDB();
+  const day = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+
+  // 1. Save locally
+  const [info] = await db.executeSql(
+    'INSERT OR REPLACE INTO attendance (student_id, class_id, day, present, sync_status) VALUES (?, ?, ?, ?, ?)',
+    [studentId, classId, day, isPresent ? 1 : 0, 'pending']
+  );
+
+  // 2. Add to sync queue
+  await addToSyncQueue('CREATE', 'attendance', { studentId, classId, day, present: isPresent ? 1 : 0, markedAt: now, markedBy }, info.insertId);
+
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    try {
+      return await request(`/api/attendance/${encodeURIComponent(studentId)}/present`, { method: 'POST', ...jsonOptions({ classId, present: isPresent, markedBy }) })
+    } catch (e) {
+      console.log('Failed to push attendance to server, queued locally', e);
+    }
+  }
+
+  return { studentId, classId, day, present: isPresent, sync_status: 'pending' };
 }
 
 export async function getAttendance(studentId, classId = null) {
   if (!studentId) throw new Error('studentId required')
-  let url = `/api/attendance/${encodeURIComponent(studentId)}`
-  if (classId) url += `?classId=${encodeURIComponent(classId)}`
-  return request(url)
+  const db = await getDB();
+  const day = new Date().toISOString().slice(0, 10);
+  const [results] = await db.executeSql(
+    'SELECT present, sync_status FROM attendance WHERE student_id = ? AND class_id IS ? AND day = ?',
+    [studentId, classId, day]
+  );
+  if (results.rows.length > 0) {
+    const item = results.rows.item(0);
+    return { present: !!item.present, syncStatus: item.sync_status };
+  }
+
+  const state = await NetInfo.fetch();
+  if (state.isConnected) {
+    try {
+      let url = `/api/attendance/${encodeURIComponent(studentId)}`
+      if (classId) url += `?classId=${encodeURIComponent(classId)}`
+      return await request(url)
+    } catch (e) {
+      return { present: false };
+    }
+  }
+  return { present: false };
 }
 
 // Planning

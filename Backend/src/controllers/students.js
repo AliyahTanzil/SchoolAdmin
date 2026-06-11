@@ -1,18 +1,23 @@
 const db = require('../db')
+const { snakeToCamel } = require('../utils/mapper')
 
 function listStudents() {
-  return db.getAllStudents()
+  return snakeToCamel(db.getAllStudents())
 }
 
 function getStudent(id) {
   const s = db.getStudentById(id)
-  if (!s) throw new Error('student not found')
-  return s
+  if (!s) {
+    const err = new Error('student not found');
+    err.status = 404;
+    throw err;
+  }
+  return snakeToCamel(s)
 }
 
 function createStudent(data) {
   if (!data || !data.name) throw new Error('name required')
-  return db.createStudent({ 
+  return snakeToCamel(db.createStudent({ 
     name: data.name, 
     email: data.email,
     gradeLevel: data.gradeLevel,
@@ -24,13 +29,17 @@ function createStudent(data) {
     parentPhone: data.parentPhone,
     status: data.status,
     meta: data.meta || {} 
-  })
+  }))
 }
 
 function updateStudent(id, data) {
   const s = db.getStudentById(id)
-  if (!s) throw new Error('student not found')
-  return db.updateStudent(id, { 
+  if (!s) {
+    const err = new Error('student not found');
+    err.status = 404;
+    throw err;
+  }
+  return snakeToCamel(db.updateStudent(id, { 
     name: data.name || s.name, 
     email: data.email !== undefined ? data.email : s.email,
     gradeLevel: data.gradeLevel !== undefined ? data.gradeLevel : s.grade_level,
@@ -42,12 +51,16 @@ function updateStudent(id, data) {
     parentPhone: data.parentPhone !== undefined ? data.parentPhone : s.parent_phone,
     status: data.status !== undefined ? data.status : s.status,
     meta: data.meta !== undefined ? data.meta : s.meta 
-  })
+  }))
 }
 
 function deleteStudent(id) {
   const s = db.getStudentById(id)
-  if (!s) throw new Error('student not found')
+  if (!s) {
+    const err = new Error('student not found');
+    err.status = 404;
+    throw err;
+  }
   return db.deleteStudent(id)
 }
 

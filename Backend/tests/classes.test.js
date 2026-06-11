@@ -1,11 +1,13 @@
 process.env.USE_SQLITE_IN_MEMORY = '1'
 const request = require('supertest')
 const app = require('../src/index')
+const { setupTestDB } = require('./helper')
 
 describe('classes and enrollments API', () => {
   let teacherId, studentId, classId, adminToken, teacherToken
 
   beforeAll(async () => {
+    await setupTestDB()
     // Setup Auth
     await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'admin' })
     const aLoginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'password' })
