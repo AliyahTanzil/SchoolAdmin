@@ -34,19 +34,18 @@ export default function Navbar() {
 
         <div className={`nav-links ${isOpen ? 'active' : ''}`}>
           <Link to="/" onClick={closeMenu}>Home</Link>
-          <details className="nav-dropdown">
-            <summary>Dashboards</summary>
-            <div className="nav-dropdown-menu">
-              <Link to="/dashboard" onClick={closeMenu}>Role Center</Link>
-              {(!user || user.role === 'student' || user.role === 'admin') && <Link to="/dashboard/student" onClick={closeMenu}>Student Dashboard</Link>}
-              {(!user || user.role === 'teacher' || user.role === 'admin') && <Link to="/dashboard/teacher" onClick={closeMenu}>Teacher Dashboard</Link>}
-              {(!user || user.role === 'admin') && <Link to="/dashboard/admin" onClick={closeMenu}>Admin Dashboard</Link>}
-              {(!user || user.role === 'finance' || user.role === 'admin') && <Link to="/dashboard/finance" onClick={closeMenu}>Finance Dashboard</Link>}
-            </div>
-          </details>
-          <Link to="/students" onClick={closeMenu}>Students</Link>
-          <Link to="/teachers" onClick={closeMenu}>Teachers</Link>
-          <Link to="/attendance" onClick={closeMenu}>Attendance</Link>
+          {user && (
+            <>
+              <Link to="/dashboard" onClick={closeMenu}>Hub</Link>
+              {(user.role === 'student' || user.role === 'admin') && <Link to="/dashboard/student" onClick={closeMenu}>Student</Link>}
+              {(user.role === 'teacher' || user.role === 'admin') && <Link to="/dashboard/teacher" onClick={closeMenu}>Teacher</Link>}
+              {(user.role === 'admin') && <Link to="/dashboard/admin" onClick={closeMenu}>Admin</Link>}
+              {(user.role === 'finance' || user.role === 'admin') && <Link to="/dashboard/finance" onClick={closeMenu}>Finance</Link>}
+              <Link to="/students" onClick={closeMenu}>Directory</Link>
+              <Link to="/teachers" onClick={closeMenu}>Faculty</Link>
+              <Link to="/attendance" onClick={closeMenu}>Attendance</Link>
+            </>
+          )}
           {user ? (
             <div className="nav-user">
               <span>{user.username} · {user.role}</span>

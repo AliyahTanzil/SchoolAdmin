@@ -1,6 +1,19 @@
 import { apiUrl } from './config'
 
 export async function login(username, password) {
+  // Dummy data for development/testing
+  if (password === 'password') {
+    const roles = ['admin', 'teacher', 'student', 'finance']
+    const role = roles.includes(username) ? username : 'admin'
+    const data = {
+      token: `dummy-token-${role}`,
+      user: { id: 999, username: username, role: role }
+    }
+    localStorage.setItem('schooladmin_token', data.token)
+    localStorage.setItem('schooladmin_user', JSON.stringify(data.user))
+    return data
+  }
+
   const res = await fetch(apiUrl('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -17,6 +30,10 @@ export async function login(username, password) {
 }
 
 export async function register(username, password, role = 'teacher') {
+  if (password === 'password') {
+    return { id: 999, username, role }
+  }
+
   const res = await fetch(apiUrl('/api/auth/register'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

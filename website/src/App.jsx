@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Landing from './components/Landing'
@@ -27,12 +27,14 @@ import ProtectedRoute from './components/ProtectedRoute'
 import './styles.css'
 
 export default function App() {
+  const location = useLocation()
+  
   return (
     <div className="app-wrapper">
       <Navbar />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route index element={<Landing />} />
           <Route path="/login" element={<AuthScreen />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/student" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
@@ -53,6 +55,7 @@ export default function App() {
           <Route path="/dashboard/student/progress" element={<ProtectedRoute><StudentProgressDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/student/timetable" element={<ProtectedRoute><StudentTimetableCalendar /></ProtectedRoute>} />
           <Route path="/dashboard/student/documents" element={<ProtectedRoute><StudentDocumentVault /></ProtectedRoute>} />
+          <Route path="*" element={<div className="sis-container"><div className="card-professional"><h2>404: Page Not Found</h2><p>The requested module could not be located.</p><button className="btn-gradient" onClick={() => window.location.href='/'}>Back to Home</button></div></div>} />
         </Routes>
       </main>
       <Footer />

@@ -61,3 +61,13 @@ export async function unenrollStudent(classId, studentId) {
   if (!res.ok) throw new Error('failed to unenroll student')
   return res.json()
 }
+
+export async function bulkEnrollStudents(classId, studentIds) {
+  const res = await fetch(apiUrl(`/api/classes/${encodeURIComponent(classId)}/bulk-enroll`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentIds })
+  })
+  if (!res.ok) throw new Error('failed bulk enrollment')
+  return res.json()
+}
