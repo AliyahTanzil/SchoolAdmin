@@ -8,9 +8,9 @@ describe('teachers API', () => {
 
   beforeAll(async () => {
     await setupTestDB()
-    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'admin' })
+    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'super_admin' })
     const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'password' })
-    adminToken = loginRes.body.token
+    adminToken = loginRes.body.accessToken
   })
 
   test('create -> get -> update -> delete teacher', async () => {

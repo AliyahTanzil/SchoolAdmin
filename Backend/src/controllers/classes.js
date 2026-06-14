@@ -21,7 +21,10 @@ function createClass(data) {
     name: data.name, 
     category: data.category,
     section: data.section,
-    teacherId: data.teacherId 
+    teacherId: data.teacherId,
+    gradeId: data.gradeId,
+    armId: data.armId,
+    academicPeriodId: data.academicPeriodId
   }))
 }
 
@@ -36,7 +39,10 @@ function updateClass(id, data) {
     name: data.name || c.name, 
     category: data.category !== undefined ? data.category : c.category,
     section: data.section !== undefined ? data.section : c.section,
-    teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id 
+    teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id,
+    gradeId: data.gradeId !== undefined ? data.gradeId : c.grade_id,
+    armId: data.armId !== undefined ? data.armId : c.arm_id,
+    academicPeriodId: data.academicPeriodId !== undefined ? data.academicPeriodId : c.academic_period_id
   }))
 }
 
@@ -62,4 +68,12 @@ function getStudents(classId) {
   return snakeToCamel(db.getStudentsInClass(classId))
 }
 
-module.exports = { listClasses, getClass, createClass, updateClass, deleteClass, enrollStudent, unenrollStudent, getStudents }
+function listSections() { return snakeToCamel(db.getAllSections()) }
+function listGrades() { return snakeToCamel(db.getAllGrades()) }
+function listArms() { return snakeToCamel(db.getAllArms()) }
+
+module.exports = { 
+  listClasses, getClass, createClass, updateClass, deleteClass, 
+  enrollStudent, unenrollStudent, getStudents,
+  listSections, listGrades, listArms
+}

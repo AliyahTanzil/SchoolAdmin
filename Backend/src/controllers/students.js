@@ -28,7 +28,9 @@ function createStudent(data) {
     parentName: data.parentName,
     parentPhone: data.parentPhone,
     status: data.status,
-    meta: data.meta || {} 
+    meta: data.meta || {},
+    gradeId: data.gradeId,
+    armId: data.armId
   }))
 }
 
@@ -50,7 +52,9 @@ function updateStudent(id, data) {
     parentName: data.parentName !== undefined ? data.parentName : s.parent_name,
     parentPhone: data.parentPhone !== undefined ? data.parentPhone : s.parent_phone,
     status: data.status !== undefined ? data.status : s.status,
-    meta: data.meta !== undefined ? data.meta : s.meta 
+    meta: data.meta !== undefined ? data.meta : s.meta,
+    gradeId: data.gradeId !== undefined ? data.gradeId : s.grade_id,
+    armId: data.armId !== undefined ? data.arm_id : s.arm_id
   }))
 }
 

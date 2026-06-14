@@ -8,7 +8,7 @@ describe('Auth API', () => {
     await setupTestDB()
   })
 
-  const adminUser = { username: 'admin', password: 'password123', role: 'admin' }
+  const adminUser = { username: 'admin', password: 'password123', role: 'super_admin' }
   const teacherUser = { username: 'teacher', password: 'password123', role: 'teacher' }
 
   test('register -> login', async () => {
@@ -23,10 +23,10 @@ describe('Auth API', () => {
       password: adminUser.password
     })
     expect(loginRes.status).toBe(200)
-    expect(loginRes.body.token).toBeDefined()
-    expect(loginRes.body.user.role).toBe('admin')
+    expect(loginRes.body.accessToken).toBeDefined()
+    expect(loginRes.body.user.role).toBe('super_admin')
 
-    const adminToken = loginRes.body.token
+    const adminToken = loginRes.body.accessToken
 
     // register teacher
     await request(app).post('/api/auth/register').send(teacherUser)
@@ -34,7 +34,7 @@ describe('Auth API', () => {
       username: teacherUser.username,
       password: teacherUser.password
     })
-    const teacherToken = tLoginRes.body.token
+    const teacherToken = tLoginRes.body.accessToken
 
     // Test RBAC: Admin can create student
     const sRes = await request(app)

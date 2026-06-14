@@ -7,15 +7,16 @@ describe('classes and enrollments API', () => {
   let teacherId, studentId, classId, adminToken, teacherToken
 
   beforeAll(async () => {
+    jest.setTimeout(30000)
     await setupTestDB()
     // Setup Auth
-    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'admin' })
+    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'super_admin' })
     const aLoginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'password' })
-    adminToken = aLoginRes.body.token
+    adminToken = aLoginRes.body.accessToken
 
     await request(app).post('/api/auth/register').send({ username: 'teacher1', password: 'password', role: 'teacher' })
     const tLoginRes = await request(app).post('/api/auth/login').send({ username: 'teacher1', password: 'password' })
-    teacherToken = tLoginRes.body.token
+    teacherToken = tLoginRes.body.accessToken
 
     // Setup: Create a teacher and a student
     const tRes = await request(app)
