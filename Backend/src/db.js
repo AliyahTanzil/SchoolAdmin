@@ -17,23 +17,35 @@ let stmtMarkPresent, stmtGetAttendance
 let stmtGetAllPeriods, stmtGetPeriod, stmtInsertPeriod, stmtUpdatePeriod, stmtDeletePeriod
 let stmtGetAllSubjects, stmtGetSubject, stmtInsertSubject, stmtUpdateSubject, stmtDeleteSubject
 let stmtGetScheduleByClass, stmtInsertSchedule, stmtDeleteSchedule
+let stmtLogAction, stmtInsertSession, stmtGetSession
 
 function init() {
+  // Sections (Hierarchy Root)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sections (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE, -- Nursery, Primary, JSS, SSS
+      description TEXT
+    );
+  `)
+
   // students
   db.exec(`
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
+      admission_number TEXT UNIQUE,
       email TEXT,
-      grade_level TEXT,
-      section TEXT,
+      section_id INTEGER, -- Link to sections
       gender TEXT,
       dob TEXT,
       address TEXT,
       parent_name TEXT,
       parent_phone TEXT,
       status TEXT DEFAULT 'Active',
-      meta TEXT
+      meta TEXT,
+      deleted_at TEXT,
+      FOREIGN KEY (section_id) REFERENCES sections (id)
     );
   `)
 
@@ -42,13 +54,15 @@ function init() {
     CREATE TABLE IF NOT EXISTS teachers (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
+      staff_id TEXT UNIQUE,
       email TEXT,
       phone TEXT,
       qualification TEXT,
       joining_date TEXT,
       status TEXT DEFAULT 'Active',
       bio TEXT,
-      subject TEXT
+      subject TEXT,
+      deleted_at TEXT
     );
   `)
 
@@ -57,10 +71,12 @@ function init() {
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
-      category TEXT,
+      section_id INTEGER NOT NULL, -- Hierarchy link
+      grade_level INTEGER, -- 1, 2, 3...
       section TEXT,
       teacher_id INTEGER,
-      FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+      FOREIGN KEY (section_id) REFERENCES sections (id)
     );
   `)
 
@@ -132,8 +148,62 @@ function init() {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE,
+      mobile_number TEXT UNIQUE,
       password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'teacher'
+      role_id INTEGER,
+      student_id INTEGER,
+      teacher_id INTEGER,
+      parent_id INTEGER,
+      two_fa_enabled INTEGER DEFAULT 0,
+      two_fa_secret TEXT,
+      status TEXT DEFAULT 'Active',
+      last_login_at TEXT,
+      FOREIGN KEY (student_id) REFERENCES students (id),
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+    );
+  `)
+
+  // RBAC Tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS roles (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT
+    );
+    CREATE TABLE IF NOT EXISTS permissions (
+      id INTEGER PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE, -- e.g., 'attendance:mark'
+      description TEXT
+    );
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      role_id INTEGER,
+      permission_id INTEGER,
+      PRIMARY KEY (role_id, permission_id),
+      FOREIGN KEY (role_id) REFERENCES roles (id),
+      FOREIGN KEY (permission_id) REFERENCES permissions (id)
+    );
+  `)
+
+  // Audit & Sessions
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      resource TEXT,
+      details TEXT,
+      ip_address TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      refresh_token TEXT NOT NULL,
+      device_info TEXT,
+      expires_at TEXT NOT NULL,
+      revoked INTEGER DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users (id)
     );
   `)
 

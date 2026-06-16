@@ -29,7 +29,7 @@ const isAdmin = (req, res, next) => {
 // Auth endpoints
 router.post('/auth/register', async (req, res) => {
   try {
-    const user = await auth.register(req.body.username, req.body.password, req.body.role)
+    const user = await auth.register(req.body.username, req.body.password, req.body.role, req.body.email, req.body.mobile)
     res.status(201).json(user)
   } catch (e) {
     res.status(400).json({ error: e.message })
@@ -38,7 +38,7 @@ router.post('/auth/register', async (req, res) => {
 
 router.post('/auth/login', async (req, res) => {
   try {
-    const result = await auth.login(req.body.username, req.body.password)
+    const result = await auth.login(req.body.identifier, req.body.password) // identifier can be email, username, or ID
     res.json(result)
   } catch (e) {
     res.status(401).json({ error: e.message })
@@ -46,7 +46,7 @@ router.post('/auth/login', async (req, res) => {
 })
 
 // Attendance endpoints
-router.post('/attendance/:id/present', authenticate, async (req, res) => {
+router.post('/attendance/:id/present', authenticate, authorize('attendance:mark'), async (req, res) => {
   try {
     const result = await attendance.markPresent(req.params.id, req.body.classId, req.user.username)
     res.json(result)
@@ -77,7 +77,7 @@ router.get('/students/:id', (req, res) => {
   }
 })
 
-router.post('/students', authenticate, isAdmin, (req, res) => {
+router.post('/students', authenticate, authorize('student:create'), (req, res) => {
   try {
     const s = students.createStudent(req.body)
     res.status(201).json(s)

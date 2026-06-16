@@ -1,0 +1,1274 @@
+# School Admin - Mobile/Tablet Biometric Attendance
+## Using Device Built-in Fingerprint Scanner (No Extra Hardware)
+
+**Approach:**
+- 🏫 **Gate Attendance** → Tablet/Phone mounted at school gate
+- 📋 **Class Attendance** → Teacher's phone/tablet marks register
+- 📱 **Parent Alerts** → Real-time push/SMS notifications
+- 🔒 **Biometric** → Device built-in fingerprint (Touch ID / Android fingerprint)
+
+**No Extra Hardware Needed!**
+- Android phone/tablet: Built-in fingerprint sensor
+- iPad/iPhone: Touch ID or Face ID
+- Cost: $0 (use existing devices)
+
+---
+
+## HOW THE SYSTEM WORKS
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    GATE CHECK-IN                         │
+│                                                          │
+│  Tablet mounted at gate (any Android/iOS tablet)        │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  [School Logo]  MORNING CHECK-IN                │    │
+│  │                                                  │    │
+│  │  Student places finger on tablet sensor         │    │
+│  │  ┌───────────────────────────────────────┐     │    │
+│  │  │  👆 Place your finger here            │     │    │
+│  │  │  [Large fingerprint animation area]   │     │    │
+│  │  └───────────────────────────────────────┘     │    │
+│  │                                                  │    │
+│  │  OR: Student enters ID / scans ID card QR code  │    │
+│  │                                                  │    │
+│  │  ✅ "Welcome, John Doe! 7:45 AM - On Time"      │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                          │
+│  → Parent gets notification instantly                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                 CLASS REGISTER                           │
+│                                                          │
+│  Teacher opens app on their phone/tablet                │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Grade 10-A | Monday Jan 26 | Morning           │    │
+│  │  ─────────────────────────────────────────────  │    │
+│  │  ✅ John Doe      [PRESENT] [ABSENT]            │    │
+│  │  ✅ Jane Smith    [PRESENT] [ABSENT]            │    │
+│  │  ❌ Mike Jones   [PRESENT] [ABSENT]            │    │
+│  │  ─────────────────────────────────────────────  │    │
+│  │  Present: 28  Absent: 2  [Submit Register]      │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                          │
+│  → Absent students' parents get URGENT alert            │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## DAY 15: Database Models for Mobile Biometric
+
+### STEP 1: Update Prisma Schema
+
+💬 **YOU SAY TO GEMINI:**
+```
+Update the Prisma schema in backend/prisma/schema.prisma to support
+mobile device biometric attendance. Add these models:
+
+1. GateDevice model:
+   - id, deviceName, deviceType (ANDROID/IOS/TABLET/PHONE)
+   - location (MAIN_GATE, SIDE_GATE, CLASSROOM)
+   - assignedTo (userId of admin/teacher managing this device)
+   - deviceUniqueId (UUID generated on first app open)
+   - isActive, lastActiveAt, createdAt
+
+2. StudentBiometric model:
+   - id, studentId (FK to Student)
+   - biometricType (FINGERPRINT, FACE_ID, PIN_BACKUP)
+   - biometricHash (encrypted hash, never store raw biometric)
+   - deviceId (which device it was enrolled on)
+   - isActive, enrolledAt, enrolledBy
+
+3. StudentAttendance model (update existing):
+   - id, studentId, attendanceDate
+   - gateCheckInTime, gateCheckOutTime
+   - gateCheckInMethod (FINGERPRINT/FACE/PIN/MANUAL)
+   - gateCheckOutMethod
+   - classCheckInTime, classCheckOutTime
+   - classCheckInMethod, classCheckOutMethod
+   - dayStatus enum (PRESENT/ABSENT/LATE/HALF_DAY/HOLIDAY)
+   - isLate, lateByMinutes
+   - gateDeviceId (device used for gate scan)
+   - markedBy (teacher who marked class register)
+   - parentNotified (boolean)
+   - remarks, createdAt, updatedAt
+
+4. AttendanceSession model:
+   - id, classId, teacherId
+   - sessionDate, sessionType (MORNING/AFTERNOON)
+   - startedAt, submittedAt
+   - totalStudents, presentCount, absentCount
+   - status (IN_PROGRESS/SUBMITTED/LOCKED)
+
+5. Add AttendanceNotificationLog model:
+   - id, studentId, parentId, notificationType
+   - sentAt, deliveryStatus, channel (PUSH/SMS/EMAIL)
+   - message, metadata JSON
+
+Include all indexes, relationships, and add a unique constraint
+on (studentId, attendanceDate) for StudentAttendance.
+Run: npx prisma migrate dev --name mobile_biometric_attendance
+```
+
+✅ **GEMINI WILL:**
+- Add all 5 models to schema
+- Create relationships and indexes
+- Run migration automatically
+- Generate Prisma client
+
+🧪 **TEST:**
+```bash
+npx prisma studio
+# Verify all new tables exist
+# Check relationships are correct
+```
+
+---
+
+### STEP 2: Seed Test Data
+
+💬 **YOU SAY TO GEMINI:**
+```
+Update backend/prisma/seed.js to add realistic test data:
+
+1. Create 1 GateDevice (school gate tablet)
+2. Create 3 teachers with profiles and shifts
+3. Create 2 classes (Grade 9-A, Grade 10-B)
+4. Create 10 students per class with:
+   - Full profiles (name, photo placeholder, roll number)
+   - Parent linked to each student
+   - StudentBiometric record (with dummy hash)
+5. Create attendance records for the past 5 days
+6. Create 2 AttendanceSessions (morning + afternoon for today)
+
+Print summary after seeding:
+"✅ 2 classes, 20 students, 10 parents, 1 gate device seeded"
+```
+
+✅ **GEMINI WILL:**
+- Update seed.js with all test data
+- Create realistic student records
+- Add biometric mappings
+- Add historical attendance
+
+🧪 **TEST:**
+```bash
+npx prisma db seed
+npx prisma studio
+# Should see 20 students with parents
+```
+
+---
+
+## DAY 16: Biometric Auth Service (Backend)
+
+### STEP 1: Create Biometric Verification Service
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create backend/src/services/biometricService.js that handles
+mobile device biometric authentication:
+
+1. Class BiometricService with methods:
+
+   enrollBiometric(studentId, deviceId, biometricType, rawBiometricData):
+   - Hash the biometric data using bcrypt (NEVER store raw)
+   - Check if student already enrolled on this device
+   - Save StudentBiometric record
+   - Return: { success, enrollmentId, message }
+
+   verifyBiometric(deviceId, rawBiometricData):
+   - Get all active students enrolled on this device
+   - Compare provided biometric hash against stored hashes
+   - Return matching studentId or null
+   - Log verification attempt (success/fail)
+   - Rate limit: max 10 failed attempts per device per minute
+
+   generatePINBackup(studentId):
+   - Generate 6-digit PIN as backup
+   - Hash and store it
+   - Return PIN to show once to student/parent
+   - Used when fingerprint fails
+
+   verifyPIN(deviceId, pin):
+   - Find student by PIN hash
+   - Return studentId if valid
+   - Increment failed attempts counter
+
+2. Security measures:
+   - Never log raw biometric data
+   - Encrypt all stored hashes
+   - Automatic PIN expiry (30 days)
+   - Device binding (biometric only works on enrolled device)
+
+3. Error handling:
+   - Biometric not enrolled → prompt enrollment
+   - Too many failed attempts → temporary lockout
+   - Device not registered → reject all requests
+```
+
+✅ **GEMINI WILL:**
+- Create biometricService.js
+- Implement secure hashing
+- Add PIN backup system
+- Include rate limiting
+- Add all security measures
+
+🧪 **TEST:**
+```bash
+node -e "
+const bio = require('./src/services/biometricService');
+bio.enrollBiometric('student_id', 'device_id', 'FINGERPRINT', 'dummy_hash')
+  .then(console.log);
+"
+```
+
+---
+
+### STEP 2: Create Attendance Controller
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create backend/src/controllers/attendanceController.js with all
+attendance management methods:
+
+1. gateCheckIn(req, res):
+   Input: { deviceId, biometricHash OR pin, checkInTime }
+   Process:
+   a) Verify device is registered and active
+   b) Verify biometric/PIN → get studentId
+   c) Check if student already checked in today
+   d) Create/update StudentAttendance record
+   e) Calculate if LATE:
+      - Get school start time from SystemSettings (default 7:45 AM)
+      - If checkInTime > startTime + grace period (15 min) → LATE
+      - Calculate lateByMinutes
+   f) Queue parent notification (GATE_ENTRY or LATE_ARRIVAL)
+   g) Emit WebSocket event: 'attendance:gate:checkin'
+   h) Return: { studentName, photo, status, checkInTime, message }
+
+2. gateCheckOut(req, res):
+   Input: { deviceId, biometricHash OR pin, checkOutTime }
+   Process:
+   a) Verify biometric → get studentId
+   b) Find today's attendance record (must have checked in)
+   c) Update gateCheckOutTime
+   d) Calculate total hours in school
+   e) Queue GATE_EXIT notification to parents
+   f) Emit WebSocket event: 'attendance:gate:checkout'
+   g) Return: { studentName, checkOutTime, totalHours }
+
+3. markClassRegister(req, res):
+   Input: { classId, sessionType, date, attendanceList: [{studentId, status}], teacherId }
+   Process:
+   a) Verify teacher has permission for this class
+   b) Check session not already submitted
+   c) Bulk update StudentAttendance records
+   d) For MORNING session:
+      - Set classCheckInTime for present students
+      - Send ABSENT_ALERT for absent students immediately
+      - Send CLASS_MORNING notification for present students
+   e) For AFTERNOON session:
+      - Set classCheckOutTime for present students
+      - Send CLASS_AFTERNOON notification
+   f) Create/update AttendanceSession record
+   g) Return: { sessionId, present, absent, notificationsSent }
+
+4. getClassRegisterForWeek(req, res):
+   Input: classId, weekStartDate (query params)
+   Return the weekly grid data structure:
+   {
+     weekDates: { monday: '2024-01-22', ... },
+     students: [{
+       id, name, rollNumber, photo,
+       weekData: {
+         monday: {
+           morning: { status, time, method },
+           afternoon: { status, time, method }
+         },
+         ...
+       }
+     }]
+   }
+
+5. getTodayGateFeed(req, res):
+   Return real-time list of today's gate check-ins:
+   [{ studentName, photo, class, checkInTime, status }]
+   Sorted by most recent first
+
+Include proper error handling, auth middleware (authenticate + authorize),
+input validation, and comprehensive API response messages.
+```
+
+✅ **GEMINI WILL:**
+- Create complete attendanceController.js
+- Implement all 5 methods
+- Add biometric verification
+- Include notification queuing
+- Add WebSocket events
+- Handle all error cases
+
+🧪 **TEST:**
+```bash
+# Start backend
+npm run dev
+
+# Test gate check-in
+curl -X POST http://localhost:3000/api/attendance/gate/checkin \
+-H "Content-Type: application/json" \
+-d '{"deviceId":"device1","biometricHash":"testhash","checkInTime":"2024-01-26T07:45:00Z"}'
+```
+
+---
+
+## DAY 17: Gate Tablet App UI
+
+### STEP 1: Gate Check-In Screen
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create a gate check-in screen at frontend/src/pages/Gate/GateCheckIn.jsx
+designed to run on a tablet mounted at the school gate:
+
+FULL SCREEN KIOSK DESIGN:
+
+Top Section (20% height):
+- School logo (left, 60px)
+- School name and "Welcome to [School Name]" (center, large text)
+- Current time displaying live: "07:45 AM" (right, large clock)
+- Current date: "Monday, January 26, 2024"
+- Today's attendance count: "Students In: 245 / 500"
+
+Middle Section (50% height) - Main Action Area:
+- Large centered circle (300px diameter):
+  * Default state: Fingerprint icon (gray, pulsing animation)
+  * Scanning state: Fingerprint icon (blue, ripple animation)
+  * Success state: Checkmark (green, bounce animation)
+  * Failed state: X icon (red, shake animation)
+- Below circle: Status text
+  * Default: "Place finger on sensor below"
+  * Scanning: "Scanning..."
+  * Success: Student name + time
+  * Failed: "Not recognized. Try again or enter ID."
+
+- Fingerprint Trigger Button (large, 80px height):
+  * Text: "👆 TAP TO SCAN FINGERPRINT"
+  * On click: Triggers device biometric API
+  * Full width on mobile, 400px on tablet
+  * Gradient background (blue to purple)
+
+- Alternative: "Enter Student ID" button (outline style below)
+  * Opens numeric keypad modal
+  * Student types 6-digit ID number
+  * Auto-submits when 6 digits entered
+
+Bottom Section (30% height):
+- Recent Check-ins Feed (horizontal scroll):
+  * Last 5 students who checked in
+  * Each: circular photo + name + time
+  * Slide in from right animation
+  * "View All" link
+
+- Session Toggle (bottom center):
+  * "MORNING CHECK-IN" | "AFTERNOON CHECK-OUT"
+  * Toggle based on time of day automatically
+  * Admin can manually override
+
+RESPONSIVE BEHAVIOR:
+- Tablet landscape (1024px+): Full layout as described
+- Tablet portrait (768px): Stack middle and bottom sections
+- Phone (< 768px): Simplified layout, larger touch targets
+
+STYLING:
+- Dark background (#0a0a1a) for visibility in sunlight
+- High contrast text (white/yellow)
+- Extra large touch targets (min 80px buttons)
+- No tiny text - minimum 18px font
+- Animations using Framer Motion
+
+KIOSK MODE FEATURES:
+- Disable browser back button
+- Full screen mode on load
+- Auto-reset to default after 5 seconds
+- No logout button (admin password to exit)
+- Show "Device Online/Offline" indicator
+
+Include: Loading state, error state, connection lost banner,
+success sound effect trigger, failure haptic feedback instruction.
+```
+
+✅ **GEMINI WILL:**
+- Create beautiful kiosk-style GateCheckIn.jsx
+- Build fingerprint trigger UI
+- Add animated circle with states
+- Create recent check-ins feed
+- Make responsive for tablet/phone
+- Add kiosk mode features
+
+🧪 **TEST:**
+```bash
+npm run dev
+# Navigate to /gate/checkin
+# Should fill entire screen
+# Test fingerprint button
+# Verify animations work
+# Test on mobile viewport (375px)
+# Test on tablet viewport (1024px)
+```
+
+---
+
+### STEP 2: Connect Gate UI to Device Biometric
+
+💬 **YOU SAY TO GEMINI:**
+```
+Update frontend/src/pages/Gate/GateCheckIn.jsx to use the
+device's built-in biometric sensor:
+
+1. Create a biometric hook at frontend/src/hooks/useBiometric.js:
+
+   useBiometric():
+   - Detect biometric availability:
+     * Web: Use WebAuthn API (navigator.credentials)
+     * Check if device supports fingerprint/face
+     * Return: { isSupported, biometricType }
+
+   authenticate(promptMessage):
+   - For Web/PWA using WebAuthn:
+     * Create PublicKeyCredentialRequestOptions
+     * Call navigator.credentials.get()
+     * Return assertion result
+   - Handle unsupported devices gracefully
+   - Return: { success, credentialId, error }
+
+   register(studentId, promptMessage):
+   - For Web/PWA using WebAuthn:
+     * Create PublicKeyCredentialCreationOptions
+     * Call navigator.credentials.create()
+     * Extract public key
+     * Send to backend for storage
+   - Return: { success, credentialId }
+
+2. Update GateCheckIn.jsx to use hook:
+   - On "Tap to Scan" button click:
+     * Call authenticate("Scan finger to check in")
+     * If success → call API with credentialId
+     * If failed → show error, offer PIN option
+   - Handle all WebAuthn errors:
+     * NotAllowedError: User cancelled
+     * NotSupportedError: Device unsupported
+     * SecurityError: Not HTTPS (show helpful message)
+
+3. Add PIN fallback modal:
+   - 6-digit numeric keypad
+   - Large buttons (80px each, easy to tap)
+   - Auto-submit on 6th digit
+   - Show/hide PIN toggle
+   - "Back" to return to fingerprint
+   - Calls /api/attendance/gate/checkin with pin instead
+
+4. HTTPS requirement notice:
+   - WebAuthn requires HTTPS
+   - If on HTTP (development): Show demo mode
+   - Demo mode simulates biometric for testing
+   - Production requires HTTPS (handled by Vercel/Cloudflare)
+
+Note: For React Native mobile app, use react-native-biometrics
+library which directly accesses device fingerprint/face ID hardware.
+```
+
+✅ **GEMINI WILL:**
+- Create useBiometric.js hook
+- Integrate WebAuthn API
+- Add PIN fallback
+- Handle all error cases
+- Add HTTPS detection
+- Create demo mode for development
+
+🧪 **TEST:**
+```bash
+# Must be on HTTPS for WebAuthn to work
+# Development: use demo mode
+# Production: test on real device
+# Verify PIN fallback works on HTTP
+```
+
+---
+
+## DAY 18: Student Enrollment for Biometric
+
+### STEP 1: Student Enrollment Screen
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create a student fingerprint enrollment screen at
+frontend/src/pages/Admin/StudentEnrollment.jsx:
+
+PAGE LAYOUT (responsive, works on phone and tablet):
+
+Header:
+- Back button
+- Title: "Fingerprint Enrollment"
+- Progress indicator: "45 / 120 students enrolled"
+
+Student Search Section:
+- Search input with icon (search by name or ID)
+- Filter by class dropdown
+- Filter by enrollment status (All/Enrolled/Not Enrolled)
+
+Student List (scrollable):
+Each student card shows:
+- Circular photo (50px) or initial avatar
+- Name (bold), Roll Number, Class
+- Enrollment status badge:
+  * Green: "Enrolled ✓" 
+  * Orange: "Not Enrolled"
+  * Gray: "Disabled"
+- "Enroll" button (orange, if not enrolled)
+- "Re-enroll" button (outline, if already enrolled)
+- "View Details" button
+
+Enrollment Modal (opens on "Enroll" click):
+- Student info at top (photo, name, class)
+- Steps indicator: 1. Verify Teacher → 2. Student Scans → 3. Confirm
+
+Step 1 - Teacher Verification:
+- "You are enrolling [Student Name]"
+- "Please authenticate as teacher to proceed"
+- [Authenticate as Teacher] button (triggers teacher's fingerprint)
+
+Step 2 - Student Biometric Scan:
+- Large fingerprint circle animation
+- "Ask student to place finger on sensor"
+- Instruction text: "Student should press firmly"
+- Scan button
+- Rescan option
+- Quality indicator: Poor/Good/Excellent
+- Option: "Add second finger (backup)"
+
+Step 3 - Confirmation:
+- "✅ Fingerprint enrolled successfully!"
+- Student name and enrollment time
+- "Done" button (closes modal, updates list)
+
+Bulk Enrollment Section:
+- "Enroll Entire Class" button
+- Opens process for one-by-one class enrollment
+- Shows queue: "Next: [Student Name]"
+- Progress: "3 of 30 students enrolled"
+- Skip button for each student
+- Finish button (mark remaining as pending)
+
+STYLING:
+- Clean white background
+- Cards with subtle shadows
+- Green/orange/gray status indicators
+- Smooth modal transitions
+- Mobile-friendly (large touch targets)
+- Works on portrait and landscape
+
+Include: Loading states, error handling (fingerprint failed),
+success celebrations (confetti), export enrollment status to Excel.
+```
+
+✅ **GEMINI WILL:**
+- Create StudentEnrollment.jsx
+- Build student list with search/filter
+- Create enrollment modal with steps
+- Add biometric scanning flow
+- Include bulk enrollment
+- Make fully responsive
+
+🧪 **TEST:**
+```bash
+npm run dev
+# Navigate to /admin/student-enrollment
+# Test search functionality
+# Test enrollment flow
+# Verify responsive on mobile
+```
+
+---
+
+## DAY 19: Teacher Class Register UI
+
+### STEP 1: Morning/Afternoon Register Screen
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create a class register screen at frontend/src/pages/Teacher/ClassRegister.jsx
+that works beautifully on both phone and tablet:
+
+=== MOBILE PHONE VIEW (< 768px) ===
+
+Top Bar:
+- Back button (arrow icon)
+- "Grade 10-A - Morning Register"
+- Date: "Monday, Jan 26"
+- Settings icon
+
+Session Toggle Pills:
+- [☀️ Morning] [🌙 Afternoon]
+- Active pill: filled blue, inactive: outline
+
+Today's Stats Bar:
+- ✅ 28 Present | ❌ 2 Absent | ⏰ 1 Late | ❓ 0 Not Marked
+- Progress bar below (green filled to percentage)
+
+Search Bar:
+- "Search student by name..." with magnify icon
+- Filter button (by status)
+
+Student List (vertical scroll):
+Each row is a card:
+┌────────────────────────────────────────┐
+│ 👤 [Photo]  John Doe          Roll: 01 │
+│              Grade 10-A               │
+│                                        │
+│  [✅ PRESENT]  [❌ ABSENT]  [⏰ LATE]  │
+│                                        │
+│  Gate: 🔒 07:45 AM (fingerprint)      │
+└────────────────────────────────────────┘
+
+- Selected state: card highlights green (present) or red (absent)
+- Gate scan badge shows if student already scanned at gate
+- Swipe right = mark present, swipe left = mark absent
+- Tap card = see full details
+
+Bottom Action Bar (sticky):
+- "Submit Morning Register" (full width blue button)
+- Disabled until all students are marked
+- Shows count: "Mark 3 more to submit"
+
+=== TABLET / DESKTOP VIEW (>= 768px) ===
+
+Left Panel (300px fixed):
+- Class selector
+- Week date tabs (Mon/Tue/Wed/Thu/Fri)
+- Session toggle (Morning/Afternoon)
+- Summary statistics
+
+Right Panel (main content):
+Weekly Grid Table:
+┌──────────────────┬──────────────┬──────────────┬──────────────┐
+│                  │   Monday     │   Tuesday    │  Wednesday   │
+│  Student         ├──────┬───────┼──────┬───────┼──────┬───────┤
+│                  │ Morn │ Aftn  │ Morn │ Aftn  │ Morn │ Aftn  │
+├──────────────────┼──────┼───────┼──────┼───────┼──────┼───────┤
+│ 👤 John Doe  01  │  ✅  │  ✅   │  ✅  │  ✅   │  ❌  │  --   │
+│ 👤 Jane Smith 02 │  ✅  │  ✅   │  ✅  │  ❌   │  ✅  │  ✅   │
+│ 👤 Bob Jones  03 │  🔒  │  ✅   │  ✅  │  ✅   │  ✅  │  ✅   │
+└──────────────────┴──────┴───────┴──────┴───────┴──────┴───────┘
+
+Legend row:
+✅ = Present (click to toggle)
+❌ = Absent (click to toggle)  
+🔒 = Gate scan (auto-marked)
+-- = Not marked (future/not yet)
+⏰ = Late
+
+CELL INTERACTIONS:
+- Click cell → Toggle: not_marked → present → absent → late
+- Right click → Context menu: [Add Note] [Mark Excused] [View History]
+- Hover → Tooltip showing details
+- Today's cells: Interactive (colored borders)
+- Past cells: Locked (view only, admin can edit)
+- Future cells: Grayed out
+
+COLUMN HEADERS:
+- Day + Date
+- Morning (☀️) and Afternoon (🌙) sub-headers
+- Click day header → Select all cells for that day
+- Current day column: Highlighted with blue background
+
+ROW FEATURES:
+- First column: Sticky (stays when scrolling right)
+- Student photo (35px circular)
+- Student name + roll number
+- Week summary badge at end: "4/5 ✅" 
+
+SUBMIT FLOW:
+- "Submit Morning Register" button (prominent, blue)
+- Opens confirmation modal:
+  "Submit morning register for Grade 10-A?
+   Present: 28 | Absent: 2 | Late: 1
+   This will notify parents of absent students."
+- [Cancel] [Submit & Notify Parents]
+- Loading state with progress
+- Success state: "✅ Register submitted. 2 parent alerts sent."
+
+REAL-TIME FEATURES:
+- 🟢 "Live" indicator top right
+- When student scans at gate, row updates instantly
+- Toast: "John Doe scanned at gate - 7:45 AM"
+- Row briefly flashes green
+
+OFFLINE MODE:
+- If no internet: Show "📵 Offline Mode" banner
+- Continue marking (stored locally)
+- Auto-sync when online restored
+- Conflict resolution (server wins, show diff)
+
+ACCESSIBILITY:
+- Tab navigation through cells
+- Space bar to toggle status
+- Keyboard shortcut legend (bottom)
+- High contrast mode support
+- Screen reader labels
+
+STYLING DETAILS:
+- Font: Inter (body), Poppins (headers)
+- Spacing: comfortable padding (16px cells)
+- Colors:
+  * Present: #e8f5e9 background, #388e3c border
+  * Absent: #ffebee background, #d32f2f border
+  * Late: #fff3e0 background, #f57c00 border
+  * Not marked: #f5f5f5 background, #bdbdbd dashed border
+  * Gate scan icon: Blue fingerprint 🔒
+- Smooth transitions: 200ms ease
+- Box shadow on rows: 0 1px 3px rgba(0,0,0,0.1)
+- Sticky headers with white background + border-bottom
+- Mobile: Card view instead of grid
+- Tablet: Full grid with horizontal scroll
+
+Include:
+- Loading skeleton matching grid layout
+- Empty state (no students in class)
+- Error boundary with retry button
+- Print view (optimized for paper, remove buttons)
+- Export to Excel button
+```
+
+✅ **GEMINI WILL:**
+- Create ClassRegister.jsx with dual layouts
+- Build card view for mobile
+- Build full weekly grid for tablet/desktop
+- Add swipe gestures on mobile
+- Include real-time WebSocket updates
+- Add submit confirmation flow
+- Implement offline mode
+- Make fully responsive
+
+🧪 **TEST:**
+```bash
+npm run dev
+# Test on mobile: localhost:5173 (375px width)
+# - Should show card list view
+# - Test swipe gestures
+# Test on tablet: (768px width)
+# - Should show weekly grid
+# - Test cell clicking
+# Test submit flow
+# Verify real-time updates
+```
+
+---
+
+## DAY 20: Parent Mobile App Notifications
+
+### STEP 1: Parent Notification Screen
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create a parent notification center at
+mobile/src/screens/Parent/NotificationsScreen.jsx (React Native):
+
+FULL SCREEN LAYOUT:
+
+Header:
+- Back arrow (if not home tab)
+- "Notifications" title
+- Mark all read button (check icon)
+- Filter icon
+
+If multiple children:
+- Child selector tabs at top:
+  [👤 John] [👤 Sarah] [All]
+  Slide indicator below active tab
+
+Filter Bar (horizontal scroll):
+[All] [Today] [Attendance] [Grades] [Alerts]
+Active filter: filled pill, inactive: outline
+
+Notification List:
+Group by date: "Today", "Yesterday", "This Week"
+
+Each notification card:
+┌────────────────────────────────────────────────┐
+│ 🟢 [Photo] John Doe arrived at school          │
+│            Main Gate • 7:45 AM                  │
+│            [View Details]        2 minutes ago  │
+└────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────┐
+│ 🔴 ABSENT ALERT - John Doe                     │
+│    Not present in morning class                 │
+│    Grade 10-A • Please respond                  │
+│    [Mark as Noted] [Contact School]  9:00 AM   │
+└────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────┐
+│ 📊 Grade Posted - Mathematics                  │
+│    Mid-term result: 85/100 (85%)               │
+│    [View Full Report]            Yesterday      │
+└────────────────────────────────────────────────┘
+
+NOTIFICATION TYPES & COLORS:
+- 🟢 Gate Entry: Green dot, arrival icon
+- 🔵 Gate Exit: Blue dot, departure icon
+- 🟠 Late Arrival: Orange dot, clock icon
+- 🔴 Absent Alert: Red dot, urgent icon
+- 📊 Grade Posted: Purple dot, chart icon
+- 📢 Announcement: Gray dot, megaphone icon
+
+NOTIFICATION ACTIONS:
+- Gate Entry/Exit: [View Attendance]
+- Absent Alert: [Mark as Noted] [Contact Teacher]
+- Grade: [View Grade] [Download Report]
+- Announcement: [Read More]
+
+SWIPE ACTIONS:
+- Swipe right: Mark as read (green)
+- Swipe left: Delete (red)
+
+EMPTY STATE:
+- Illustration: Person with empty inbox
+- "No notifications yet"
+- "You'll be notified when your child's
+   attendance or grades are updated"
+
+PULL TO REFRESH:
+- Custom refresh animation
+- "Checking for updates..."
+- Shows last refresh time
+
+REAL-TIME:
+- Socket.io connection
+- New notifications slide in from top
+- Badge count updates
+- Subtle ping sound (respects device silent mode)
+
+STYLING (React Native):
+- Use React Native Paper for base components
+- Custom card styles with shadows
+- Smooth FlatList scrolling
+- Haptic feedback on actions
+- Dark/Light mode support
+
+Include: Pagination (load 20 at a time), infinite scroll,
+unread count badge on tab bar icon, share notification option.
+```
+
+✅ **GEMINI WILL:**
+- Create NotificationsScreen.jsx (React Native)
+- Build notification list with types
+- Add swipe actions
+- Include real-time updates
+- Create action buttons per type
+- Add haptic feedback
+- Support dark/light mode
+
+🧪 **TEST:**
+```bash
+cd mobile/SchoolAdminMobile
+npx react-native run-android
+# Navigate to notifications
+# Verify notification types display correctly
+# Test swipe actions
+# Check pull to refresh
+```
+
+---
+
+### STEP 2: Real-time Notification Service (Backend)
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create backend/src/services/notificationService.js that handles
+all attendance notifications:
+
+1. sendAttendanceNotification(type, data):
+
+   For GATE_ENTRY:
+   - Push: "🟢 [StudentName] arrived at school at [Time]"
+   - SMS (if enabled): "Hi [ParentName], [StudentName] arrived at [SchoolName] at [Time]"
+   - Email: Beautiful HTML email with school colors
+
+   For GATE_EXIT:
+   - Push: "🔵 [StudentName] left school at [Time]"
+   - SMS: "Hi [ParentName], [StudentName] left [SchoolName] at [Time]. School hours: [X] hours"
+
+   For LATE_ARRIVAL:
+   - Push: "⏰ [StudentName] arrived LATE at [Time] ([X] mins late)"
+   - SMS: "[StudentName] arrived late at [Time], [X] minutes after start time"
+
+   For ABSENT_ALERT:
+   - Push (HIGH PRIORITY): "🔴 ABSENT: [StudentName] was not present in [Session] today"
+   - SMS (ALWAYS SEND): "URGENT: [StudentName] is absent in [Session]. Reply YES if planned, NO to contact school. - [SchoolName]"
+   - Email: Detailed absence notification with action buttons
+
+   For CLASS_MORNING:
+   - Push: "✅ [StudentName] is present in morning class - [ClassName]"
+
+   For CLASS_AFTERNOON:
+   - Push: "✅ [StudentName] completed full day attendance"
+
+2. getAllParentsForStudent(studentId):
+   - Get primary and secondary parents
+   - Return: [{ userId, phone, email, name, notificationPreferences }]
+
+3. queueNotification(type, studentId, data, priority):
+   - Add to Bull queue with priority (1=high, 5=normal, 10=low)
+   - HIGH: ABSENT_ALERT (process immediately)
+   - NORMAL: GATE_ENTRY, GATE_EXIT, CLASS checks
+   - LOW: Weekly summaries
+
+4. sendWeeklySummary(studentId):
+   - Every Friday at 4 PM
+   - Email to parents:
+     "Week Summary for [StudentName]:
+      Days Present: 4/5 (80%)
+      Late Arrivals: 1
+      Classes Attended: 8/10
+      Download weekly report: [link]"
+
+5. handleSMSReply(from, body):
+   - If parent replied YES to absent alert:
+     * Mark absence as "Excused - Parent Confirmed"
+     * Notify teacher
+   - If parent replied NO:
+     * Create urgent task for school to call parent
+     * Notify admin
+
+Use Resend for emails, Twilio for SMS, Firebase Admin SDK for push.
+Use Bull queue with Redis for all notifications.
+Include retry logic and delivery status tracking.
+```
+
+✅ **GEMINI WILL:**
+- Create notificationService.js
+- Implement all notification types
+- Set up Bull queue with priorities
+- Add weekly summary feature
+- Handle SMS replies
+- Include retry logic
+
+🧪 **TEST:**
+```bash
+# Trigger gate check-in
+# Verify parent receives push notification
+# Check SMS delivered (if configured)
+# Verify email delivered to inbox
+# Test absent alert priority
+```
+
+---
+
+## DAY 21: Attendance Reports & Analytics
+
+### STEP 1: Admin Analytics Dashboard
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create frontend/src/pages/Admin/AttendanceDashboard.jsx -
+a responsive analytics dashboard:
+
+=== MOBILE VIEW (stacked cards) ===
+
+Top: "Attendance Overview" + date picker
+
+Stats Row (2x2 grid of cards):
+┌───────────────┬───────────────┐
+│  Today        │  This Week    │
+│  450/500      │   92%         │
+│  Students In  │   Average     │
+├───────────────┼───────────────┤
+│  Late Today   │  Absent Today │
+│  12 students  │  38 students  │
+│  ⏰ orange    │  ❌ red       │
+└───────────────┴───────────────┘
+
+Chart: Daily trend (last 7 days)
+- Line chart
+- Full width
+
+Absent Students List:
+- Condensed card per student
+- Name, class, parent notified indicator
+- "Call Parent" button
+
+=== TABLET / DESKTOP VIEW ===
+
+Left sidebar (260px):
+- Date range picker
+- Class filter
+- Quick filters: Today/Week/Month
+
+Main content area:
+Row 1 - Stats cards (4 in a row):
+[Total Present Today] [Absent Today] [Late Today] [Attendance Rate]
+
+Row 2 - Charts (2 columns):
+Left: Weekly attendance trend (line chart)
+Right: By-class comparison (bar chart)
+
+Row 3 - Live Feed + Absent Table:
+Left (40%): Real-time gate activity
+Right (60%): Absent students table
+
+LIVE GATE FEED:
+- "🟢 Live" pulsing dot
+- Scrolling list (newest first):
+  "07:45 - John Doe ✅ On Time"
+  "07:52 - Jane Smith ✅ On Time"
+  "08:10 - Bob Jones ⏰ 25 min late"
+- Auto-scroll, max 50 items shown
+- WebSocket powered
+
+ABSENT STUDENTS TABLE:
+Columns: Photo | Name | Class | Last Seen | Parent Notified | Action
+Rows: Clickable to view student details
+Action column: [📞 Call] [✉️ Email] [✅ Mark Excused]
+Filter by class dropdown
+Export to PDF/Excel buttons
+
+BOTTOM: Class Comparison Chart
+- All classes side by side
+- Bar height = attendance percentage
+- Click bar = drill down to class details
+
+CHARTS USE: Recharts library
+COLORS: Green(present), Red(absent), Orange(late), Blue(trend)
+RESPONSIVE: Recharts responsive containers
+
+All data fetched from API with 5-minute cache,
+manual refresh button, WebSocket for live feed,
+loading skeleton matching layout.
+```
+
+✅ **GEMINI WILL:**
+- Create AttendanceDashboard.jsx
+- Build responsive stats cards
+- Add Recharts charts
+- Create live WebSocket feed
+- Build absent students table
+- Make mobile and desktop responsive
+
+🧪 **TEST:**
+```bash
+npm run dev
+# Navigate to /admin/attendance-dashboard
+# Check all charts render
+# Verify live feed updates
+# Test mobile view (375px)
+# Test desktop view (1920px)
+```
+
+---
+
+## DAY 22: Attendance Certificate Generation
+
+### STEP 1: Certificate Service
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create backend/src/services/certificateService.js using PDFKit:
+
+npm install pdfkit qrcode jimp
+
+Generate beautiful attendance certificates:
+
+1. Template: Monthly Attendance Certificate
+   A4 size (595 x 842 points)
+
+   Design:
+   - Gold decorative border (double line, 10pt from edge)
+   - Light blue gradient background
+   - Top center: School logo placeholder circle
+   - "Certificate of Attendance" (28pt, bold, dark navy #1a237e)
+   - Decorative divider line (gold)
+   
+   Body:
+   - "This certifies that" (14pt, italic, gray)
+   - [STUDENT NAME] (24pt, bold, dark blue, centered)
+   - "Class [X] - Section [Y]" (14pt, gray)
+   - "has maintained" (14pt, italic)
+   - [XX%] (48pt, bold, colored by performance:
+       ≥95%: Gold, 85-94%: Green, 75-84%: Blue, <75%: Gray)
+   - "attendance during" (14pt)
+   - [Month Year] (18pt, bold)
+   - Stats row: "Present: XX days | Absent: XX | Late: XX"
+   - Performance badge: "EXCELLENT" / "GOOD" / "SATISFACTORY"
+   
+   Footer:
+   - Left: School stamp circle placeholder
+   - Center: Issue date
+   - Right: Principal signature line
+   - Bottom: QR code (60x60) for verification
+   - "Certificate ID: CERT-2024-XXXXXX"
+
+2. generateCertificate(data, template) → returns PDF buffer
+
+3. createCertificateRecord(studentId, pdfBuffer) → upload to storage, save to DB
+
+4. verifyCertificate(certificateId) → validate authenticity
+
+Make the PDF look professional and beautiful using PDFKit's
+drawing capabilities. Add decorative elements using PDFKit
+shapes (circles, rectangles, lines) with colors.
+```
+
+✅ **GEMINI WILL:**
+- Create certificateService.js
+- Install PDFKit
+- Generate beautiful certificate PDF
+- Add QR code verification
+- Include cloud upload
+
+🧪 **TEST:**
+```bash
+node -e "
+const cert = require('./src/services/certificateService');
+cert.generateCertificate({
+  studentName: 'John Doe',
+  class: '10', section: 'A',
+  month: 'January 2024',
+  presentDays: 20, totalDays: 22,
+  percentage: 90.9
+}, 'monthly').then(pdf => {
+  require('fs').writeFileSync('test-cert.pdf', pdf);
+  console.log('Open test-cert.pdf to view');
+});
+"
+```
+
+---
+
+### STEP 2: Certificate Gallery UI
+
+💬 **YOU SAY TO GEMINI:**
+```
+Create frontend/src/pages/Student/Certificates.jsx - a
+certificate gallery that works on mobile and desktop:
+
+MOBILE LAYOUT:
+- Header: "My Certificates" + Request button
+- Vertical list of certificate cards:
+  Each card:
+  - Certificate type badge (Monthly/Annual)
+  - Period: "January 2024"
+  - Large attendance percentage: "90%" (colored)
+  - Performance: ⭐ "GOOD"
+  - Issue date
+  - [Download] [Share] buttons
+
+DESKTOP LAYOUT:
+- Grid (3 columns)
+- Same card content as mobile
+- Hover effect: scale up slightly + shadow
+
+REQUEST CERTIFICATE MODAL:
+Step 1: Select type (Monthly/Annual/Custom)
+Step 2: Select period (month picker or date range)
+Step 3: Preview stats
+  "Expected attendance: 20/22 days (90%)"
+  "Performance: GOOD"
+  [Generate Certificate] button
+Step 4: Done → Download prompt
+
+CERTIFICATE VIEWER MODAL:
+- PDF preview in iframe or react-pdf
+- Download button
+- Print button
+- Share: [WhatsApp] [Copy Link]
+- QR code for verification
+- Close button
+
+STYLING:
+- Clean white cards
+- Gold accents for excellent certificates
+- Green for good, blue for satisfactory
+- Download icon button (blue)
+- Share icon button (green)
+- Responsive grid → list on mobile
+```
+
+✅ **GEMINI WILL:**
+- Create Certificates.jsx
+- Build certificate card grid
+- Add request modal with steps
+- Include PDF viewer
+- Add share functionality
+- Make fully responsive
+
+🧪 **TEST:**
+```bash
+npm run dev
+# Navigate to /student/certificates
+# Request a certificate
+# Download and view PDF
+# Test share functionality
+# Check mobile view
+```
+
+---
+
+## ✅ COMPLETE DAILY CHECKLIST
+
+### Week 3 (Days 15-21):
+- [ ] Day 15: Database models updated and migrated
+- [ ] Day 16: Biometric service + attendance controller
+- [ ] Day 17: Gate check-in screen (kiosk tablet UI)
+- [ ] Day 18: Student enrollment UI
+- [ ] Day 19: Class register (mobile card + desktop grid)
+- [ ] Day 20: Parent notifications (mobile app + service)
+- [ ] Day 21: Admin analytics dashboard
+
+### Week 4 (Days 22-28):
+- [ ] Day 22: Certificate generation (PDF)
+- [ ] Day 23: Certificate gallery UI
+- [ ] Day 24: SMS integration (Twilio)
+- [ ] Day 25: Offline mode (PWA)
+- [ ] Day 26: Gamification (points + badges)
+- [ ] Day 27: Absence follow-up automation
+- [ ] Day 28: Full testing sprint
+
+---
+
+## 📱 RESPONSIVE DESIGN RULES
+
+### Breakpoints Used:
+```css
+/* Mobile first approach */
+xs: 0px      /* Phone portrait */
+sm: 600px    /* Phone landscape / small tablet */
+md: 768px    /* Tablet portrait */
+lg: 1024px   /* Tablet landscape / small desktop */
+xl: 1280px   /* Desktop */
+xxl: 1920px  /* Large desktop */
+```
+
+### Component Behavior:
+| Component | Mobile | Tablet | Desktop |
+|-----------|--------|--------|---------|
+| Gate Screen | Full-screen kiosk | Full-screen kiosk | Full-screen |
+| Class Register | Card list + swipe | Grid (5 days) | Grid + sidebar |
+| Dashboard | Stacked cards | 2-column | 4-column |
+| Certificates | List view | 2-col grid | 3-col grid |
+| Notifications | Full-screen list | List with preview | List + detail |
+
+---
+
+## 🚀 START BUILDING TODAY!
+
+**Copy this first command to Gemini CLI:**
+
+```
+Update the Prisma schema in backend/prisma/schema.prisma to support
+mobile device biometric attendance. Add these models:
+[copy STEP 1 command from DAY 15 above]
+```
+
+**Then work through each day step by step!**
