@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native'
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, ScrollView } from 'react-native'
 import { listStudents, listClasses, listClassStudents, markPresent, getAttendance } from '../api'
 
 export default function Attendance({ onNavigate }) {

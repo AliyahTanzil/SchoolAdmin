@@ -1,18 +1,57 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 const BASE_URL = 'http://localhost:3001/api' // Change this for real device testing
+
+let authToken = null
+
+export const setAuthToken = async (token) => {
+  authToken = token
+  if (token) {
+    await AsyncStorage.setItem('authToken', token)
+  } else {
+    await AsyncStorage.removeItem('authToken')
+  }
+}
+
+export const initAuth = async () => {
+  authToken = await AsyncStorage.getItem('authToken')
+  return authToken
+}
 
 export async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   })
+
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`)
+    let errorMsg = `API error: ${response.status}`
+    try {
+      const errorData = await response.json()
+      errorMsg = errorData.error || errorMsg
+    } catch (e) { /* ignore json parse error */ }
+    throw new Error(errorMsg)
   }
   return response.json()
+}
+
+export const login = async (username, password) => {
+  const data = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password })
+  })
+  await setAuthToken(data.token)
+  return data
 }
 
 // Students
