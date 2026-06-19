@@ -51,4 +51,20 @@ describe('Auth API', () => {
       .send({ name: 'Ghost Student' })
     expect(sResFail2.status).toBe(401)
   }, 20000)
+
+  test('validation errors', async () => {
+    // short username
+    const res1 = await request(app).post('/api/auth/register').send({ username: 'ab', password: 'password123' })
+    expect(res1.status).toBe(400)
+    expect(res1.body.error).toContain('Username')
+
+    // short password
+    const res2 = await request(app).post('/api/auth/register').send({ username: 'validuser', password: '123' })
+    expect(res2.status).toBe(400)
+    expect(res2.body.error).toContain('Password')
+
+    // missing login fields
+    const res3 = await request(app).post('/api/auth/login').send({ username: 'admin' })
+    expect(res3.status).toBe(401) // Routes map login errors to 401
+  })
 })

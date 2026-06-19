@@ -41,4 +41,22 @@ describe('students API', () => {
     expect(del.status).toBe(200)
     expect(del.body.id).toBe(id)
   })
+
+  test('validation errors', async () => {
+    // missing name
+    const res1 = await request(app)
+      .post('/api/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ email: 'test@example.com' })
+    expect(res1.status).toBe(400)
+    expect(res1.body.error).toContain('name')
+
+    // invalid email
+    const res2 = await request(app)
+      .post('/api/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Bob', email: 'invalid-email' })
+    expect(res2.status).toBe(400)
+    expect(res2.body.error).toContain('email')
+  })
 })

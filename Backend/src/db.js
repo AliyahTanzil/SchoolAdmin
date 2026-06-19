@@ -20,12 +20,23 @@ let stmtGetScheduleByClass, stmtInsertSchedule, stmtDeleteSchedule
 let stmtLogAction, stmtInsertSession, stmtGetSession
 
 function init() {
-  // Sections (Hierarchy Root)
+  // sections (Hierarchy Root)
   db.exec(`
     CREATE TABLE IF NOT EXISTS sections (
       id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE, -- Nursery, Primary, JSS, SSS
+      name TEXT NOT NULL UNIQUE,
       description TEXT
+    );
+  `)
+
+  // grade_levels
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS grade_levels (
+      id INTEGER PRIMARY KEY,
+      section_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      level_order INTEGER,
+      FOREIGN KEY (section_id) REFERENCES sections (id)
     );
   `)
 
@@ -34,9 +45,12 @@ function init() {
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
-      admission_number TEXT UNIQUE,
+      admission_number TEXT,
       email TEXT,
-      section_id INTEGER, -- Link to sections
+      grade_level_id INTEGER,
+      section_id INTEGER,
+      grade_level TEXT,
+      section TEXT,
       gender TEXT,
       dob TEXT,
       address TEXT,
@@ -45,6 +59,7 @@ function init() {
       status TEXT DEFAULT 'Active',
       meta TEXT,
       deleted_at TEXT,
+      FOREIGN KEY (grade_level_id) REFERENCES grade_levels (id),
       FOREIGN KEY (section_id) REFERENCES sections (id)
     );
   `)
@@ -71,14 +86,16 @@ function init() {
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
-      section_id INTEGER NOT NULL, -- Hierarchy link
-      grade_level INTEGER, -- 1, 2, 3...
+      category TEXT,
       section TEXT,
       teacher_id INTEGER,
-      FOREIGN KEY (teacher_id) REFERENCES teachers (id),
-      FOREIGN KEY (section_id) REFERENCES sections (id)
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id)
     );
   `)
+  // Ensure grade_level_id and section_id columns exist in classes
+  const classesInfo = db.prepare('PRAGMA table_info(classes)').all();
+  if (!classesInfo.find(c => c.name === 'grade_level_id')) db.exec('ALTER TABLE classes ADD COLUMN grade_level_id INTEGER');
+  if (!classesInfo.find(c => c.name === 'section_id')) db.exec('ALTER TABLE classes ADD COLUMN section_id INTEGER');
 
   // academic periods (Years/Terms)
   db.exec(`
@@ -151,58 +168,24 @@ function init() {
       email TEXT UNIQUE,
       mobile_number TEXT UNIQUE,
       password_hash TEXT NOT NULL,
-      role_id INTEGER,
-      student_id INTEGER,
-      teacher_id INTEGER,
-      parent_id INTEGER,
-      two_fa_enabled INTEGER DEFAULT 0,
-      two_fa_secret TEXT,
+      role TEXT,
       status TEXT DEFAULT 'Active',
-      last_login_at TEXT,
-      FOREIGN KEY (student_id) REFERENCES students (id),
-      FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+      last_login_at TEXT
     );
   `)
+  // Ensure foreign keys exist in users
+  const usersInfo = db.prepare('PRAGMA table_info(users)').all();
+  if (!usersInfo.find(c => c.name === 'student_id')) db.exec('ALTER TABLE users ADD COLUMN student_id INTEGER');
+  if (!usersInfo.find(c => c.name === 'teacher_id')) db.exec('ALTER TABLE users ADD COLUMN teacher_id INTEGER');
+  if (!usersInfo.find(c => c.name === 'parent_id')) db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER');
 
-  // RBAC Tables
+  // login_sessions
   db.exec(`
-    CREATE TABLE IF NOT EXISTS roles (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
-      description TEXT
-    );
-    CREATE TABLE IF NOT EXISTS permissions (
-      id INTEGER PRIMARY KEY,
-      code TEXT NOT NULL UNIQUE, -- e.g., 'attendance:mark'
-      description TEXT
-    );
-    CREATE TABLE IF NOT EXISTS role_permissions (
-      role_id INTEGER,
-      permission_id INTEGER,
-      PRIMARY KEY (role_id, permission_id),
-      FOREIGN KEY (role_id) REFERENCES roles (id),
-      FOREIGN KEY (permission_id) REFERENCES permissions (id)
-    );
-  `)
-
-  // Audit & Sessions
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS audit_logs (
-      id INTEGER PRIMARY KEY,
-      user_id INTEGER,
-      action TEXT NOT NULL,
-      resource TEXT,
-      details TEXT,
-      ip_address TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS user_sessions (
+    CREATE TABLE IF NOT EXISTS login_sessions (
       id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      refresh_token TEXT NOT NULL,
-      device_info TEXT,
-      expires_at TEXT NOT NULL,
-      revoked INTEGER DEFAULT 0,
+      status TEXT NOT NULL,
+      user_id INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id)
     );
   `)
@@ -211,12 +194,12 @@ function init() {
   stmtGetAllStudents = db.prepare('SELECT * FROM students')
   stmtGetStudent = db.prepare('SELECT * FROM students WHERE id = ?')
   stmtInsertStudent = db.prepare(`
-    INSERT INTO students (name, email, grade_level, section, gender, dob, address, parent_name, parent_phone, status, meta) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO students (name, email, grade_level_id, section_id, grade_level, section, gender, dob, address, parent_name, parent_phone, status, meta) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmtUpdateStudent = db.prepare(`
     UPDATE students SET 
-      name = ?, email = ?, grade_level = ?, section = ?, gender = ?, 
+      name = ?, email = ?, grade_level_id = ?, section_id = ?, grade_level = ?, section = ?, gender = ?, 
       dob = ?, address = ?, parent_name = ?, parent_phone = ?, status = ?, meta = ? 
     WHERE id = ?
   `)
@@ -238,8 +221,8 @@ function init() {
 
   stmtGetAllClasses = db.prepare('SELECT * FROM classes')
   stmtGetClass = db.prepare('SELECT * FROM classes WHERE id = ?')
-  stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id) VALUES (?, ?, ?, ?)')
-  stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ? WHERE id = ?')
+  stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id, grade_level_id, section_id) VALUES (?, ?, ?, ?, ?, ?)')
+  stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ?, grade_level_id = ?, section_id = ? WHERE id = ?')
   stmtDeleteClass = db.prepare('DELETE FROM classes WHERE id = ?')
 
   // Planning
@@ -292,7 +275,9 @@ function getStudentById(id) {
 function createStudent(data) {
   const meta = data.meta ? JSON.stringify(data.meta) : null
   const info = stmtInsertStudent.run(
-    data.name, data.email || null, data.gradeLevel || null, data.section || null, 
+    data.name, data.email || null, 
+    data.gradeLevelId || null, data.sectionId || null, 
+    data.gradeLevel || null, data.section || null, // Keeping old columns for backward compat
     data.gender || null, data.dob || null, data.address || null, 
     data.parentName || null, data.parentPhone || null, data.status || 'Active', meta
   )
@@ -305,6 +290,8 @@ function updateStudent(id, data) {
   const meta = data.meta ? JSON.stringify(data.meta) : JSON.stringify(s.meta)
   stmtUpdateStudent.run(
     data.name || s.name, data.email !== undefined ? data.email : s.email,
+    data.gradeLevelId !== undefined ? data.gradeLevelId : s.grade_level_id,
+    data.sectionId !== undefined ? data.sectionId : s.section_id,
     data.gradeLevel !== undefined ? data.gradeLevel : s.grade_level,
     data.section !== undefined ? data.section : s.section,
     data.gender !== undefined ? data.gender : s.gender,
@@ -377,7 +364,11 @@ function getClassById(id) {
 }
 
 function createClass(data) {
-  const info = stmtInsertClass.run(data.name, data.category || null, data.section || null, data.teacherId || null)
+  const info = stmtInsertClass.run(
+    data.name, data.category || null, data.section || null, 
+    data.teacherId || null,
+    data.gradeLevelId || null, data.sectionId || null // New FKs
+  )
   return getClassById(info.lastInsertRowid)
 }
 
@@ -388,7 +379,9 @@ function updateClass(id, data) {
     data.name || c.name, 
     data.category !== undefined ? data.category : c.category,
     data.section !== undefined ? data.section : c.section,
-    data.teacherId !== undefined ? data.teacherId : c.teacher_id, 
+    data.teacherId !== undefined ? data.teacherId : c.teacher_id,
+    data.gradeLevelId !== undefined ? data.gradeLevelId : c.grade_level_id,
+    data.sectionId !== undefined ? data.sectionId : c.section_id,
     id
   )
   return getClassById(id)
@@ -502,6 +495,7 @@ function createUser(data) {
 }
 
 module.exports = { 
+  db,
   init, 
   getAllStudents, getStudentById, createStudent, updateStudent, deleteStudent, 
   getAllTeachers, getTeacherById, createTeacher, updateTeacher, deleteTeacher,

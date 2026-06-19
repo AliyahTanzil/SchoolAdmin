@@ -15,8 +15,10 @@ function createClass(data) {
   return db.createClass({ 
     name: data.name, 
     category: data.category,
-    section: data.section,
-    teacherId: data.teacherId 
+    section: data.section, // Legacy
+    teacherId: data.teacherId,
+    gradeLevelId: data.gradeLevelId,
+    sectionId: data.sectionId
   })
 }
 
@@ -26,8 +28,10 @@ function updateClass(id, data) {
   return db.updateClass(id, { 
     name: data.name || c.name, 
     category: data.category !== undefined ? data.category : c.category,
-    section: data.section !== undefined ? data.section : c.section,
-    teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id 
+    section: data.section !== undefined ? data.section : c.section, // Legacy
+    teacherId: data.teacherId !== undefined ? data.teacherId : c.teacher_id,
+    gradeLevelId: data.gradeLevelId !== undefined ? data.gradeLevelId : c.grade_level_id,
+    sectionId: data.sectionId !== undefined ? data.sectionId : c.section_id
   })
 }
 

@@ -1,5 +1,9 @@
 const db = require('../db')
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 function listTeachers() {
   return db.getAllTeachers()
 }
@@ -11,10 +15,16 @@ function getTeacher(id) {
 }
 
 function createTeacher(data) {
-  if (!data || !data.name) throw new Error('name required')
+  if (!data || !data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
+    throw new Error('Teacher name is required')
+  }
+  if (data.email && !isValidEmail(data.email)) {
+    throw new Error('Invalid email format')
+  }
+
   return db.createTeacher({ 
-    name: data.name, 
-    email: data.email, 
+    name: data.name.trim(), 
+    email: data.email || null, 
     phone: data.phone,
     qualification: data.qualification,
     joiningDate: data.joiningDate,
@@ -27,8 +37,16 @@ function createTeacher(data) {
 function updateTeacher(id, data) {
   const t = db.getTeacherById(id)
   if (!t) throw new Error('teacher not found')
+
+  if (data.name !== undefined && (typeof data.name !== 'string' || data.name.trim().length === 0)) {
+    throw new Error('Teacher name cannot be empty')
+  }
+  if (data.email && !isValidEmail(data.email)) {
+    throw new Error('Invalid email format')
+  }
+
   return db.updateTeacher(id, { 
-    name: data.name || t.name, 
+    name: data.name !== undefined ? data.name.trim() : t.name, 
     email: data.email !== undefined ? data.email : t.email,
     phone: data.phone !== undefined ? data.phone : t.phone,
     qualification: data.qualification !== undefined ? data.qualification : t.qualification,

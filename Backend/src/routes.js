@@ -5,6 +5,7 @@ const teachers = require('./controllers/teachers');
 const classes = require('./controllers/classes');
 const planning = require('./controllers/planning');
 const auth = require('./controllers/auth');
+const { hasPermission } = require('./permissions');
 
 // Auth Middleware
 const authenticate = (req, res, next) => {
@@ -26,6 +27,13 @@ const isAdmin = (req, res, next) => {
   next()
 }
 
+const authorize = (permission) => (req, res, next) => {
+  const { role } = req.user
+  if (hasPermission(role, permission)) return next()
+  
+  res.status(403).json({ error: `Forbidden: Missing permission ${permission}` })
+}
+
 // Auth endpoints
 router.post('/auth/register', async (req, res) => {
   try {
@@ -38,7 +46,7 @@ router.post('/auth/register', async (req, res) => {
 
 router.post('/auth/login', async (req, res) => {
   try {
-    const result = await auth.login(req.body.identifier, req.body.password) // identifier can be email, username, or ID
+    const result = await auth.login(req.body.username || req.body.identifier, req.body.password) // identifier can be email, username, or ID
     res.json(result)
   } catch (e) {
     res.status(401).json({ error: e.message })
@@ -227,5 +235,28 @@ router.post('/planning/schedules', authenticate, isAdmin, (req, res) => {
   try { res.status(201).json(planning.addSchedule(req.body)) } catch (e) { res.status(400).json({ error: e.message }) }
 })
 router.delete('/planning/schedules/:id', authenticate, isAdmin, (req, res) => res.json(planning.removeSchedule(req.params.id)))
+
+// QR Auth
+router.get('/auth/qr-init', (req, res) => {
+  const sessionId = require('crypto').randomUUID()
+  require('./db').db.prepare('INSERT INTO login_sessions (id, status, created_at) VALUES (?, ?, ?)').run(sessionId, 'pending', new Date().toISOString())
+  res.json({ sessionId })
+})
+
+router.post('/auth/qr-scan', authenticate, (req, res) => {
+  const { sessionId } = req.body
+  require('./db').db.prepare('UPDATE login_sessions SET status = ?, user_id = ? WHERE id = ?').run('authenticated', req.user.id, sessionId)
+  res.json({ status: 'success' })
+})
+
+router.get('/auth/qr-check/:uuid', (req, res) => {
+  const session = require('./db').db.prepare('SELECT status, user_id FROM login_sessions WHERE id = ?').get(req.params.uuid)
+  if (!session) return res.status(404).json({ error: 'Session not found' })
+  if (session.status !== 'authenticated') return res.json({ status: session.status })
+  
+  const user = require('./db').getUserById(session.user_id)
+  const token = require('jsonwebtoken').sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET || 'dev-secret-key', { expiresIn: '24h' })
+  res.json({ status: 'authenticated', token })
+})
 
 module.exports = router;
