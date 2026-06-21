@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { listStudents, deleteStudent } from '../../api/students'
 import StudentForm, { SCHOOL_TIERS } from './StudentForm'
+import EmptyState from '../ui/EmptyState'
+import ErrorState from '../ui/ErrorState'
+import PageHeader from '../ui/PageHeader'
 
 export default function StudentList() {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingStudent, setEditingStudent] = useState(null)
   
@@ -16,10 +20,12 @@ export default function StudentList() {
   const fetchStudents = async () => {
     try {
       setLoading(true)
+      setError('')
       const data = await listStudents()
       setStudents(data)
     } catch (err) {
       console.error('Failed to load students', err)
+      setError('Student records could not be loaded. Check the API connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -57,15 +63,15 @@ export default function StudentList() {
   return (
     <div className="sis-container">
       <div className="card-professional">
-        <div className="module-header">
-          <div>
-            <h2 style={{ color: 'var(--primary)', marginBottom: '4px' }}>Student Information System</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Manage institutional student records and academic tiers.</p>
-          </div>
-          <button className="btn-gradient" style={{ borderRadius: '4px' }} onClick={() => setShowForm(true)}>
-            + Register Student
-          </button>
-        </div>
+        <PageHeader
+          title="Student Information System"
+          subtitle="Manage institutional student records and academic tiers."
+          action={(
+            <button className="btn-gradient" onClick={() => setShowForm(true)}>
+              + Register Student
+            </button>
+          )}
+        />
 
         {/* Search and Filters */}
         <div className="form-grid" style={{ marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
@@ -96,6 +102,9 @@ export default function StudentList() {
           </div>
         </div>
 
+        {error ? (
+          <ErrorState title="Unable to Load Students" message={error} />
+        ) : (
         <div className="table-responsive">
           <table className="table-professional">
             <thead>
@@ -150,12 +159,21 @@ export default function StudentList() {
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>No student records found matching the criteria.</td></tr>
+              ) : null}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan="7">
+                    <EmptyState
+                      title="No student records found"
+                      message="Adjust your filters or register a new student to build the directory."
+                    />
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {showForm && (

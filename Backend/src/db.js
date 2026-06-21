@@ -1,9 +1,7 @@
 const path = require('path')
 const Database = require('better-sqlite3')
-
-const DB_FILE = process.env.USE_SQLITE_IN_MEMORY === '1' ? ':memory:' : (process.env.DB_FILE || path.join(__dirname, '../../data/db.sqlite'))
-
 const fs = require('fs')
+<<<<<<< HEAD
 const dir = DB_FILE === ':memory:' ? null : path.dirname(DB_FILE)
 if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
@@ -34,6 +32,10 @@ db.pragma('page_size = 4096') // Optimize page size
 db.pragma('foreign_keys = ON') // Enable foreign key constraints
 db.pragma('recursive_triggers = ON') // Enable recursive triggers
 
+=======
+
+let db;
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 let stmtGetAllStudents, stmtGetStudent, stmtInsertStudent, stmtUpdateStudent, stmtDeleteStudent
 let stmtGetAllTeachers, stmtGetTeacher, stmtInsertTeacher, stmtUpdateTeacher, stmtDeleteTeacher
 let stmtGetAllClasses, stmtGetClass, stmtInsertClass, stmtUpdateClass, stmtDeleteClass
@@ -42,6 +44,7 @@ let stmtMarkPresent, stmtGetAttendance
 let stmtGetAllPeriods, stmtGetPeriod, stmtInsertPeriod, stmtUpdatePeriod, stmtDeletePeriod
 let stmtGetAllSubjects, stmtGetSubject, stmtInsertSubject, stmtUpdateSubject, stmtDeleteSubject
 let stmtGetScheduleByClass, stmtInsertSchedule, stmtDeleteSchedule
+<<<<<<< HEAD
 let stmtLogAction, stmtInsertSession, stmtGetSession
 let stmtGetAllSections, stmtGetSection, stmtGetSectionByName, stmtInsertSection, stmtUpdateSection, stmtDeleteSection
 let stmtGetAllGradeLevels, stmtGetGradeLevel, stmtGetGradeLevelsBySection, stmtInsertGradeLevel, stmtUpdateGradeLevel, stmtDeleteGradeLevel
@@ -217,21 +220,62 @@ function init() {
       FOREIGN KEY (user_id) REFERENCES users (id)
     );
   `)
+=======
+let stmtGetUserByUsername, stmtGetUserById, stmtInsertUser
+let stmtGetAllSections, stmtGetAllGrades, stmtGetAllArms
+
+function ensureColumns(table, columns) {
+  const existing = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(column => column.name))
+
+  for (const column of columns) {
+    if (!existing.has(column.name)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`)
+    }
+  }
+}
+
+function init() {
+  const DB_FILE = process.env.USE_SQLITE_IN_MEMORY === '1' ? ':memory:' : (process.env.DB_FILE || path.join(__dirname, '../../data/db.sqlite'))
+
+  const dir = DB_FILE === ':memory:' ? null : path.dirname(DB_FILE)
+  if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+
+  db = new Database(DB_FILE)
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 
   // prepare statements
   stmtGetAllStudents = db.prepare('SELECT * FROM students')
   stmtGetStudent = db.prepare('SELECT * FROM students WHERE id = ?')
   stmtInsertStudent = db.prepare(`
+<<<<<<< HEAD
     INSERT INTO students (name, email, grade_level_id, section_id, grade_level, section, gender, dob, address, parent_name, parent_phone, status, meta) 
+=======
+    INSERT INTO students (name, email, grade_level, section, gender, dob, address, parent_name, parent_phone, status, meta, grade_id, arm_id) 
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmtUpdateStudent = db.prepare(`
     UPDATE students SET 
+<<<<<<< HEAD
       name = ?, email = ?, grade_level_id = ?, section_id = ?, grade_level = ?, section = ?, gender = ?, 
       dob = ?, address = ?, parent_name = ?, parent_phone = ?, status = ?, meta = ? 
+=======
+      name = ?, email = ?, grade_level = ?, section = ?, gender = ?, 
+      dob = ?, address = ?, parent_name = ?, parent_phone = ?, status = ?, meta = ?,
+      grade_id = ?, arm_id = ?
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
     WHERE id = ?
   `)
   stmtDeleteStudent = db.prepare('DELETE FROM students WHERE id = ?')
+
+  stmtGetStudentWithSection = db.prepare(`
+    SELECT s.*, g.section_id 
+    FROM students s
+    LEFT JOIN school_grades g ON s.grade_id = g.id
+    WHERE s.id = ?
+  `)
+
+  stmtPromoteStudents = db.prepare('UPDATE students SET grade_id = ?, arm_id = ? WHERE id = ?')
 
   stmtGetAllTeachers = db.prepare('SELECT * FROM teachers')
   stmtGetTeacher = db.prepare('SELECT * FROM teachers WHERE id = ?')
@@ -249,9 +293,19 @@ function init() {
 
   stmtGetAllClasses = db.prepare('SELECT * FROM classes')
   stmtGetClass = db.prepare('SELECT * FROM classes WHERE id = ?')
+<<<<<<< HEAD
   stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id, grade_level_id, section_id) VALUES (?, ?, ?, ?, ?, ?)')
   stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ?, grade_level_id = ?, section_id = ? WHERE id = ?')
+=======
+  stmtInsertClass = db.prepare('INSERT INTO classes (name, category, section, teacher_id, grade_id, arm_id, academic_period_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  stmtUpdateClass = db.prepare('UPDATE classes SET name = ?, category = ?, section = ?, teacher_id = ?, grade_id = ?, arm_id = ?, academic_period_id = ? WHERE id = ?')
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
   stmtDeleteClass = db.prepare('DELETE FROM classes WHERE id = ?')
+
+  // Hierarchy Lookups
+  stmtGetAllSections = db.prepare('SELECT * FROM school_sections ORDER BY ordinal ASC')
+  stmtGetAllGrades = db.prepare('SELECT * FROM school_grades ORDER BY ordinal ASC')
+  stmtGetAllArms = db.prepare('SELECT * FROM school_arms ORDER BY name ASC')
 
   // Planning
   stmtGetAllPeriods = db.prepare('SELECT * FROM academic_periods')
@@ -282,6 +336,7 @@ function init() {
   stmtGetUserById = db.prepare('SELECT id, username, role FROM users WHERE id = ?')
   stmtInsertUser = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)')
 
+<<<<<<< HEAD
   // Sections
   stmtGetAllSections = db.prepare('SELECT * FROM sections ORDER BY name')
   stmtGetSection = db.prepare('SELECT * FROM sections WHERE id = ?')
@@ -298,13 +353,61 @@ function init() {
   stmtUpdateGradeLevel = db.prepare('UPDATE grade_levels SET section_id = ?, name = ?, level_order = ? WHERE id = ?')
   stmtDeleteGradeLevel = db.prepare('DELETE FROM grade_levels WHERE id = ?')
   stmtGetStudentsByGradeLevel = db.prepare('SELECT * FROM students WHERE grade_level_id = ?')
+=======
+  // Enterprise Auth
+  stmtGetUserByIdentifier = db.prepare(`
+    SELECT u.id, u.username, u.password_hash, u.role 
+    FROM users u 
+    JOIN user_credentials c ON u.id = c.user_id 
+    WHERE c.identifier = ?
+  `)
+  stmtInsertSession = db.prepare(`
+    INSERT INTO user_sessions (id, user_id, refresh_token_hash, device_fingerprint, ip_address, expires_at) 
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  stmtGetSession = db.prepare('SELECT * FROM user_sessions WHERE id = ? AND revoked_at IS NULL')
+  stmtGetSessionByHash = db.prepare('SELECT * FROM user_sessions WHERE refresh_token_hash = ? AND revoked_at IS NULL')
+  stmtUpdateSession = db.prepare('UPDATE user_sessions SET refresh_token_hash = ?, expires_at = ? WHERE id = ?')
+  stmtRevokeSession = db.prepare('UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?')
+  stmtRevokeAllSessions = db.prepare('UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+  
+  stmtInsertAuditLog = db.prepare('INSERT INTO security_audit_logs (user_id, event_type, metadata, severity) VALUES (?, ?, ?, ?)')
+  stmtInsertCredential = db.prepare('INSERT INTO user_credentials (user_id, credential_type, identifier, is_primary) VALUES (?, ?, ?, ?)')
+
+  // HRBAC
+  stmtGetRoleIdByName = db.prepare('SELECT id FROM rbac_roles WHERE name = ?')
+  stmtInsertUserRole = db.prepare('INSERT INTO rbac_user_roles (user_id, role_id) VALUES (?, ?)')
+  stmtGetUserRoles = db.prepare(`
+    SELECT r.*, ur.scope_json 
+    FROM rbac_roles r
+    JOIN rbac_user_roles ur ON r.id = ur.role_id
+    WHERE ur.user_id = ?
+  `)
+  
+  // Get all permissions for a user, including inherited ones
+  stmtGetUserPermissions = db.prepare(`
+    WITH RECURSIVE RoleHierarchy(id, parent_role_id) AS (
+      SELECT r.id, r.parent_role_id
+      FROM rbac_roles r
+      JOIN rbac_user_roles ur ON r.id = ur.role_id
+      WHERE ur.user_id = ?
+      UNION ALL
+      SELECT r.id, r.parent_role_id
+      FROM rbac_roles r
+      JOIN RoleHierarchy rh ON r.id = rh.parent_role_id
+    )
+    SELECT DISTINCT p.slug
+    FROM rbac_permissions p
+    JOIN rbac_role_permissions rp ON p.id = rp.permission_id
+    JOIN RoleHierarchy rh ON rp.role_id = rh.id
+  `)
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 }
 
-try {
-  init()
-} catch (e) {
-  console.error('DB init error:', e)
-}
+// Hierarchy
+function getAllSections() { return stmtGetAllSections.all() }
+function getAllGrades() { return stmtGetAllGrades.all() }
+function getAllArms() { return stmtGetAllArms.all() }
 
 // Students
 function getAllStudents() {
@@ -324,7 +427,8 @@ function createStudent(data) {
     data.gradeLevelId || null, data.sectionId || null, 
     data.gradeLevel || null, data.section || null, // Keeping old columns for backward compat
     data.gender || null, data.dob || null, data.address || null, 
-    data.parentName || null, data.parentPhone || null, data.status || 'Active', meta
+    data.parentName || null, data.parentPhone || null, data.status || 'Active', meta,
+    data.gradeId || null, data.armId || null
   )
   return getStudentById(info.lastInsertRowid)
 }
@@ -345,7 +449,10 @@ function updateStudent(id, data) {
     data.parentName !== undefined ? data.parentName : s.parent_name,
     data.parentPhone !== undefined ? data.parentPhone : s.parent_phone,
     data.status !== undefined ? data.status : s.status,
-    meta, id
+    meta, 
+    data.gradeId !== undefined ? data.gradeId : s.grade_id,
+    data.armId !== undefined ? data.armId : s.arm_id,
+    id
   )
   return getStudentById(id)
 }
@@ -410,9 +517,14 @@ function getClassById(id) {
 
 function createClass(data) {
   const info = stmtInsertClass.run(
+<<<<<<< HEAD
     data.name, data.category || null, data.section || null, 
     data.teacherId || null,
     data.gradeLevelId || null, data.sectionId || null // New FKs
+=======
+    data.name, data.category || null, data.section || null, data.teacherId || null,
+    data.gradeId || null, data.armId || null, data.academicPeriodId || null
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
   )
   return getClassById(info.lastInsertRowid)
 }
@@ -424,9 +536,16 @@ function updateClass(id, data) {
     data.name || c.name, 
     data.category !== undefined ? data.category : c.category,
     data.section !== undefined ? data.section : c.section,
+<<<<<<< HEAD
     data.teacherId !== undefined ? data.teacherId : c.teacher_id,
     data.gradeLevelId !== undefined ? data.gradeLevelId : c.grade_level_id,
     data.sectionId !== undefined ? data.sectionId : c.section_id,
+=======
+    data.teacherId !== undefined ? data.teacherId : c.teacher_id, 
+    data.gradeId !== undefined ? data.gradeId : c.grade_id,
+    data.armId !== undefined ? data.armId : c.arm_id,
+    data.academicPeriodId !== undefined ? data.academicPeriodId : c.academic_period_id,
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
     id
   )
   return getClassById(id)
@@ -536,7 +655,63 @@ function getUserById(id) {
 
 function createUser(data) {
   const info = stmtInsertUser.run(data.username, data.passwordHash, data.role || 'teacher')
-  return getUserById(info.lastInsertRowid)
+  const userId = info.lastInsertRowid
+  stmtInsertCredential.run(userId, 'username', data.username, 1)
+  
+  // Also assign role in HRBAC system if it exists
+  const roleName = data.role || 'teacher'
+  const role = stmtGetRoleIdByName.get(roleName)
+  if (role) {
+    stmtInsertUserRole.run(userId, role.id)
+  }
+
+  return getUserById(userId)
+}
+
+// Enterprise Auth
+function getUserByIdentifier(identifier) {
+  return stmtGetUserByIdentifier.get(identifier) || null
+}
+
+function createSession(data) {
+  stmtInsertSession.run(data.id, data.userId, data.refreshTokenHash, data.deviceFingerprint, data.ipAddress || null, data.expiresAt)
+  return data
+}
+
+function getSession(id) {
+  return stmtGetSession.get(id) || null
+}
+
+function getSessionByHash(hash) {
+  return stmtGetSessionByHash.get(hash) || null
+}
+
+function updateSession(id, data) {
+  stmtUpdateSession.run(data.refreshTokenHash, data.expiresAt, id)
+  return getSession(id)
+}
+
+function revokeSession(id) {
+  stmtRevokeSession.run(id)
+  return { id, revoked: true }
+}
+
+function revokeAllUserSessions(userId) {
+  stmtRevokeAllSessions.run(userId)
+  return { userId, revoked: true }
+}
+
+function logSecurityEvent(data) {
+  stmtInsertAuditLog.run(data.userId || null, data.eventType, data.metadata ? JSON.stringify(data.metadata) : null, data.severity || 'INFO')
+}
+
+// HRBAC
+function getUserRoles(userId) {
+  return stmtGetUserRoles.all(userId).map(r => ({ ...r, scope: r.scope_json ? JSON.parse(r.scope_json) : {} }))
+}
+
+function getUserPermissions(userId) {
+  return stmtGetUserPermissions.all(userId).map(r => r.slug)
 }
 
 // Sections
@@ -610,6 +785,7 @@ function getStudentsByGradeLevel(gradeLevelId) {
 module.exports = { 
   db,
   init, 
+  getAllSections, getAllGrades, getAllArms,
   getAllStudents, getStudentById, createStudent, updateStudent, deleteStudent, 
   getAllTeachers, getTeacherById, createTeacher, updateTeacher, deleteTeacher,
   getAllClasses, getClassById, createClass, updateClass, deleteClass,
@@ -619,7 +795,12 @@ module.exports = {
   enrollStudent, unenrollStudent, getStudentsInClass, getClassesForStudent,
   markPresent, getAttendance,
   getUserByUsername, getUserById, createUser,
+<<<<<<< HEAD
   getAllSections, getSectionById, getSectionByName, createSection, updateSection, deleteSection,
   getAllGradeLevels, getGradeLevelById, getGradeLevelsBySection, createGradeLevel, updateGradeLevel, deleteGradeLevel,
   getStudentsByGradeLevel
+=======
+  getUserByIdentifier, createSession, getSession, getSessionByHash, updateSession, revokeSession, revokeAllUserSessions, logSecurityEvent,
+  getUserRoles, getUserPermissions
+>>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 }

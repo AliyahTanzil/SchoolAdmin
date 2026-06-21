@@ -1,10 +1,19 @@
-const db = require('./db')
+const knex = require('knex');
+const config = require('../knexfile');
 
-try {
-  db.init()
-  console.log('Database initialization/migration complete')
-  process.exit(0)
-} catch (e) {
-  console.error('Migration failed:', e)
-  process.exit(1)
+async function migrate() {
+  const db = knex(config);
+  try {
+    console.log('Running migrations...');
+    await db.migrate.latest();
+    console.log('Migrations complete');
+    process.exit(0);
+  } catch (e) {
+    console.error('Migration failed:', e);
+    process.exit(1);
+  } finally {
+    await db.destroy();
+  }
 }
+
+migrate();

@@ -25,7 +25,7 @@ export default function TeacherForm({ teacher, onClose, onSuccess }) {
       }
       onSuccess()
     } catch (err) {
-      alert('Failed to save teacher record.')
+      alert(err.message || 'Failed to save teacher record.')
     } finally {
       setLoading(false)
     }
@@ -33,7 +33,7 @@ export default function TeacherForm({ teacher, onClose, onSuccess }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '700px' }}>
+      <div className="modal-content registration-modal teacher-registration-modal">
         <div className="module-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '25px' }}>
           <h3>{teacher ? 'Update Teacher Record' : 'Register New Faculty Member'}</h3>
         </div>

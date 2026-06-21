@@ -1,0 +1,8 @@
+
+> schooladmin-mobile@0.1.0 start
+> expo start --host localhost --host localhost --port 8081
+
+Starting project at C:\Users\khadi\Downloads\SchoolAdmin\mobileApp
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.

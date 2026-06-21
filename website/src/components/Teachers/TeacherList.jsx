@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { listTeachers, deleteTeacher } from '../../api/teachers'
 import TeacherForm from './TeacherForm'
+import EmptyState from '../ui/EmptyState'
+import ErrorState from '../ui/ErrorState'
+import PageHeader from '../ui/PageHeader'
 
 export default function TeacherList() {
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingTeacher, setEditingTeacher] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -12,10 +16,12 @@ export default function TeacherList() {
   const fetchTeachers = async () => {
     try {
       setLoading(true)
+      setError('')
       const data = await listTeachers()
       setTeachers(data)
     } catch (err) {
       console.error('Failed to load faculty', err)
+      setError('Faculty records could not be loaded. Check the API connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -49,15 +55,15 @@ export default function TeacherList() {
   return (
     <div className="sis-container">
       <div className="card-professional">
-        <div className="module-header">
-          <div>
-            <h2 style={{ color: 'var(--primary)', marginBottom: '4px' }}>Teacher Information System (TIS)</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Manage faculty profiles, qualifications, and assignments.</p>
-          </div>
-          <button className="btn-gradient" style={{ borderRadius: '4px' }} onClick={() => setShowForm(true)}>
-            + Register Faculty
-          </button>
-        </div>
+        <PageHeader
+          title="Teacher Information System (TIS)"
+          subtitle="Manage faculty profiles, qualifications, and assignments."
+          action={(
+            <button className="btn-gradient" onClick={() => setShowForm(true)}>
+              + Register Faculty
+            </button>
+          )}
+        />
 
         <div className="form-grid" style={{ marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
           <div className="form-field">
@@ -71,6 +77,9 @@ export default function TeacherList() {
           </div>
         </div>
 
+        {error ? (
+          <ErrorState title="Unable to Load Faculty" message={error} />
+        ) : (
         <div className="table-responsive">
           <table className="table-professional">
             <thead>
@@ -117,12 +126,21 @@ export default function TeacherList() {
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>No faculty matching your search.</td></tr>
+              ) : null}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan="6">
+                    <EmptyState
+                      title="No faculty records found"
+                      message="Adjust your search or register a new faculty member."
+                    />
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {showForm && (

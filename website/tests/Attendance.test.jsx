@@ -29,9 +29,10 @@ test('renders students and marks present', async () => {
   
   expect(screen.getByText('John Doe')).toBeInTheDocument()
   
-  const btn = screen.getByText('Mark Present')
-  fireEvent.click(btn)
+  const presentButtons = screen.getAllByText('P')
+  fireEvent.click(presentButtons[presentButtons.length - 1])
+  fireEvent.click(screen.getByText('Submit Sheet'))
   
-  const out = await screen.findByText(/Marked present: 1/)
+  const out = await screen.findByText(/Attendance saved successfully/)
   expect(out).toBeInTheDocument()
 })

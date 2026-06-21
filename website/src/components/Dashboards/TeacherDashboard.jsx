@@ -1,5 +1,6 @@
 import React from "react"
 import { Link } from "react-router-dom"
+import SystemsPanel from './SystemsPanel'
 
 const stats = [
   { label: "Classes Today", value: "6", hint: "2 morning, 4 afternoon", color: "#2563eb" },
@@ -11,8 +12,8 @@ const stats = [
 const teachingBlocks = [
   { title: "Take Attendance", description: "Mark class attendance in seconds and review who is missing." , to: "/attendance"},
   { title: "My Timetable", description: "See your daily teaching schedule and room assignments.", to: "/planning/timetable" },
-  { title: "Subject Notes", description: "Open curriculum subjects and planning resources.", to: "/planning/subjects" },
-  { title: "Student Roster", description: "Check students in your classes and review records.", to: "/students" }
+  { title: 'Gradebook', description: 'Enter class grades and submit scores with one click.', to: '/dashboard/teacher/gradebook' },
+  { title: 'Behavior Remarks', description: 'Log student behavior notes and counseling guidance.', to: '/dashboard/teacher/remarks' }
 ]
 
 const alerts = [
@@ -55,6 +56,8 @@ export default function TeacherDashboard() {
           </article>
         ))}
       </section>
+
+      <SystemsPanel />
 
       <section className="dashboard-content-grid dashboard-content-grid-teacher">
         <article className="dashboard-panel">

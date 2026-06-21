@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import SystemsPanel from './SystemsPanel'
 
 const stats = [
   { label: 'Total Students', value: '1,240', hint: '+86 this term', color: '#2563eb' },
@@ -12,7 +13,11 @@ const shortcuts = [
   { to: '/students', title: 'Student Records', description: 'Admissions, profiles, tiers, and status.' },
   { to: '/teachers', title: 'Faculty Directory', description: 'Staff profiles, qualifications, and subjects.' },
   { to: '/planning/subjects', title: 'Academic Planning', description: 'Subjects, terms, and timetable setup.' },
-  { to: '/attendance', title: 'Attendance Center', description: 'Daily oversight and class attendance.' }
+  { to: '/attendance', title: 'Attendance Center', description: 'Daily oversight and class attendance.' },
+  { to: '/dashboard/admin/ledger', title: 'Master Ledger', description: 'Fast access to the full student directory and ledger review.' },
+  { to: '/dashboard/admin/admissions', title: 'Admissions Portal', description: 'Quick enrollment workflow for new learners.' },
+  { to: '/dashboard/admin/promotions', title: 'Promotion Matrix', description: 'Batch-promote students to next classes in one flow.' },
+  { to: '/dashboard/admin/config', title: 'School Configuration', description: 'Session, term, and academic settings management.' }
 ]
 
 const alerts = [
@@ -55,6 +60,8 @@ export default function AdminDashboard() {
           </article>
         ))}
       </section>
+
+      <SystemsPanel />
 
       <section className="dashboard-content-grid dashboard-content-grid-admin">
         <article className="dashboard-panel">

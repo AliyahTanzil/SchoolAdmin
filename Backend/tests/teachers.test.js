@@ -1,14 +1,16 @@
 process.env.USE_SQLITE_IN_MEMORY = '1'
 const request = require('supertest')
 const app = require('../src/index')
+const { setupTestDB } = require('./helper')
 
 describe('teachers API', () => {
   let adminToken
 
   beforeAll(async () => {
-    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'admin' })
+    await setupTestDB()
+    await request(app).post('/api/auth/register').send({ username: 'admin', password: 'password', role: 'super_admin' })
     const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'password' })
-    adminToken = loginRes.body.token
+    adminToken = loginRes.body.accessToken
   })
 
   test('create -> get -> update -> delete teacher', async () => {

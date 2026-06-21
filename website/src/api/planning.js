@@ -1,7 +1,9 @@
+import { apiUrl } from './config'
+
 const AUTH_TOKEN = () => localStorage.getItem('token')
 
 async function request(url, options = {}) {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     ...options,
     headers: {
       'Content-Type': 'application/json',

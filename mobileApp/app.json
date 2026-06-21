@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "SchoolAdmin",
+    "slug": "schooladmin-mobile",
+    "version": "0.1.0",
+    "sdkVersion": "49.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.schooladmin.mobile"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2e5b5224-46f8-481d-8e8e-52a96687f8a5"
+      }
+    },
+    "owner": "medisha"
+  }
+}
