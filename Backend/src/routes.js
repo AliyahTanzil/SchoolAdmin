@@ -7,6 +7,32 @@ const planning = require('./controllers/planning');
 const auth = require('./controllers/auth');
 const { hasPermission } = require('./permissions');
 
+// Deprecation warning middleware for v1 endpoints
+function deprecationWarning(req, res, next) {
+  const warning = {
+    deprecated: true,
+    version: 'v1',
+    sunsetDate: '2025-06-19',
+    message: 'API v1 is deprecated. Please migrate to v2 endpoints. See /api/version for details.',
+    migrateTo: req.originalPath.replace('/api/v1', '/api/v2')
+  };
+  
+  res.setHeader('X-API-Deprecation', JSON.stringify(warning));
+  res.setHeader('X-API-Deprecated', 'true');
+  res.setHeader('X-API-Sunset', '2025-06-19');
+  
+  // Add warning to response if it's a JSON response
+  const originalJson = res.json;
+  res.json = function(data) {
+    if (typeof data === 'object' && !data._deprecated) {
+      data._deprecated = warning;
+    }
+    originalJson.call(this, data);
+  };
+  
+  next();
+}
+
 // Auth Middleware
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization
@@ -33,6 +59,10 @@ const authorize = (permission) => (req, res, next) => {
   
   res.status(403).json({ error: `Forbidden: Missing permission ${permission}` })
 }
+
+
+// Apply deprecation warning to all v1 routes
+router.use(deprecationWarning);
 
 // Auth endpoints
 router.post('/auth/register', async (req, res) => {

@@ -1,7 +1,8 @@
 # SchoolAdmin Todo List
 
 ## Current Tasks
-- [ ] Implement proper Permission-to-Role mapping in a dedicated config or DB table. (Moved to permissions.js, but could be DB-backed later).
+- [x] Implement proper Permission-to-Role mapping in a dedicated config or DB table. (Moved to permissions.js, but could be DB-backed later).
+    - Database-backed RBAC system already implemented in Backend/src/middleware/rbac.js with roles, user_roles tables, and full permission management.
 
 ## Completed Tasks
 - [x] Implement Authentication in Mobile App.

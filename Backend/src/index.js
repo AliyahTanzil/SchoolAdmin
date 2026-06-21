@@ -1,20 +1,100 @@
 const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
 const routes = require('./routes');
+const routesV2 = require('./routesV2');
 
 const app = express();
-app.use(express.json());
-app.use('/api', routes);
 
-// initialize database schema
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for API
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API versioning
+app.use('/api/v1', routes); // Legacy endpoints
+app.use('/api/v2', routesV2); // New endpoints with enhanced features
+app.use('/api', routesV2); // Latest version (redirects to v2)
+
+// API version endpoint
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: '2.0',
+    latest: 'v2',
+    deprecated: ['v1'],
+    deprecationNotice: {
+      v1: {
+        deprecated: true,
+        sunsetDate: '2025-06-19',
+        migrateTo: 'v2'
+      }
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  try {
+    require('./db').db.prepare('SELECT 1').get();
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: 'connected'
+    });
+  } catch (e) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: e.message
+    });
+  }
+});
+
+// Initialize database schema
 try {
   require('./db').init()
+  console.log('Database initialized successfully')
 } catch (e) {
   console.error('DB init error:', e)
 }
 
+// Initialize RBAC system
+try {
+  require('./middleware/rbac').initRBAC()
+  console.log('RBAC system initialized successfully')
+} catch (e) {
+  console.error('RBAC init error:', e)
+}
+
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET environment variable not set. Using default is not recommended for production.')
+}
+
 if (require.main === module) {
   const port = process.env.PORT || 3001;
-  app.listen(port, () => console.log(`Backend running on ${port}`));
+  app.listen(port, () => {
+    console.log(`Backend running on port ${port}`);
+    console.log(`API v1: http://localhost:${port}/api/v1`);
+    console.log(`API v2: http://localhost:${port}/api/v2`);
+    console.log(`Health: http://localhost:${port}/health`);
+  });
 }
 
 module.exports = app;
