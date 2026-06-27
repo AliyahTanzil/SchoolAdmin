@@ -3,18 +3,7 @@ import { StyleSheet, Text, View, ScrollView } from 'react-native'
 import { colors, shadow } from '../theme'
 import SystemsPanel from './Dashboards/SystemsPanel'
 import ActionCard from './ui/ActionCard'
-import TimelineWidget from './ui/TimelineWidget'
-import AcademicProgressChart from './ui/AcademicProgressChart'
 
-<<<<<<< HEAD
-export default function Dashboard({ onNavigate, user }) {
-  const isAdmin = user?.role === 'admin'
-  const stats = [
-    { label: 'Students', value: '1,200' },
-    { label: 'Classes', value: '45' },
-    { label: 'Attendance', value: '94%' },
-  ]
-=======
 const roles = [
   {
     screen: 'StudentDashboard',
@@ -49,16 +38,9 @@ const roles = [
     color: '#7c3aed'
   }
 ]
->>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 
 export default function Dashboard({ navigation }) {
   return (
-<<<<<<< HEAD
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome, {user?.name || 'User'}</Text>
-        <Text style={styles.subtitle}>{user?.role?.toUpperCase()} Dashboard</Text>
-=======
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <Text style={styles.kicker}>Role Center</Text>
@@ -71,7 +53,6 @@ export default function Dashboard({ navigation }) {
           <Text style={styles.sessionTitle}>2025-2026</Text>
           <Text style={styles.sessionText}>Four role-specific dashboards are ready for operations.</Text>
         </View>
->>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
       </View>
 
       {roles.map((role) => (
@@ -91,54 +72,12 @@ export default function Dashboard({ navigation }) {
         />
       ))}
 
-<<<<<<< HEAD
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('Attendance')}>
-          <Text style={styles.actionBtnText}>Track Attendance</Text>
-        </TouchableOpacity>
-        
-        {isAdmin && (
-          <>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('StudentList')}>
-              <Text style={styles.actionBtnText}>Manage Students</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigate('TeacherList')}>
-              <Text style={styles.actionBtnText}>Manage Teachers</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        <TouchableOpacity style={[styles.actionBtn, styles.logoutBtn]} onPress={() => onNavigate('Logout')}>
-          <Text style={styles.actionBtnText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-=======
-      <AcademicProgressChart />
-      <TimelineWidget />
-
       <SystemsPanel navigation={navigation} />
->>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  container: { flex: 1, backgroundColor: '#f7fafc' },
-  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  title: { fontSize: 24, fontWeight: '700', color: '#2d3748' },
-  subtitle: { fontSize: 14, color: '#718096', marginTop: 4 },
-  statsGrid: { flexDirection: 'row', padding: 15, flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCard: { backgroundColor: '#fff', width: '30%', padding: 15, borderRadius: 10, elevation: 2, alignItems: 'center' },
-  statValue: { fontSize: 18, fontWeight: '700', color: '#2b6cb0' },
-  statLabel: { fontSize: 10, color: '#718096', textTransform: 'uppercase', marginTop: 5 },
-  section: { padding: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, color: '#2d3748' },
-  actionBtn: { backgroundColor: '#2b6cb0', padding: 15, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
-  logoutBtn: { backgroundColor: '#e53e3e', marginTop: 20 },
-  actionBtnText: { color: '#fff', fontWeight: '600', fontSize: 16 }
-=======
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: 18, paddingBottom: 28 },
   hero: {
@@ -167,5 +106,4 @@ const styles = StyleSheet.create({
   },
   roleMetric: { color: colors.text, fontSize: 30, fontWeight: '900' },
   roleLabel: { color: colors.textLight, fontSize: 12, fontWeight: '900', letterSpacing: 0.4, textTransform: 'uppercase' },
->>>>>>> ddce0325cef474b14f8ee55a79fee7b4fa984616
 })
